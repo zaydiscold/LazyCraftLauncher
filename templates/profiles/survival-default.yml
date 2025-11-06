@@ -1,0 +1,21 @@
+name: "Survival Default"
+description: "Balanced vanilla survival with PvP enabled."
+server:
+  motd: "LazyCraft Survival Server"
+  difficulty: normal
+  gamemode: survival
+  spawn-protection: 16
+  pvp: true
+  max-players: 20
+  allow-flight: false
+  allow-nether: true
+  view-distance: 10
+  simulation-distance: 10
+  level-type: default
+  spawn-npcs: true
+  spawn-animals: true
+  spawn-monsters: true
+  white-list: false
+  force-gamemode: false
+  enable-command-block: false
+  online-mode: true

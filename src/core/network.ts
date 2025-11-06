@@ -4,12 +4,26 @@
  */
 
 import os from 'os';
+import path from 'path';
+import fs from 'fs-extra';
 import got from 'got';
-import { Client as NatClient } from 'nat-api';
+import NatAPI from 'nat-api';
 import { execa } from 'execa';
 import { logger } from '../utils/log.js';
 import { getLocalIP } from './detect.js';
+import { getPaths } from '../utils/paths.js';
+import {
+  getWindowsFirewallAddArgs,
+  getWindowsFirewallRemoveArgs,
+  getWindowsFirewallManualSteps,
+} from '../platform/windows.js';
+import {
+  getMacFirewallCommands,
+  getMacFirewallManualSteps,
+  getMacFirewallRemoveCommand,
+} from '../platform/mac.js';
 import type { NetworkInfo } from '../types/index.js';
+import { isElevated } from '../utils/permissions.js';
 
 /**
  * Setup network configuration
@@ -41,6 +55,8 @@ export async function setupNetwork(
     upnpSuccess,
     reachable: false,
   };
+
+  await persistNetworkInfo(networkInfo);
   
   return networkInfo;
 }
@@ -66,17 +82,24 @@ async function getPublicIP(): Promise<string | undefined> {
 async function setupUPnP(port: number): Promise<boolean> {
   try {
     logger.info(`Attempting UPnP port mapping for port ${port}...`);
-    
-    const client = new NatClient();
-    
-    await client.map({
-      publicPort: port,
-      privatePort: port,
-      protocol: 'TCP',
-      description: 'LazyCraftLauncher Minecraft Server',
-      ttl: 0, // Permanent mapping
+    const client = new NatAPI();
+    await new Promise<void>((resolve, reject) => {
+      client.map(
+        {
+          publicPort: port,
+          privatePort: port,
+          protocol: 'TCP',
+          description: 'LazyCraftLauncher Minecraft Server',
+          ttl: 0,
+        },
+        (err: Error | null) => {
+          client.close();
+          if (err) reject(err);
+          else resolve();
+        }
+      );
     });
-    
+  
     logger.info('UPnP port mapping successful');
     console.log('UPnP enabled successfully!');
     return true;
@@ -120,21 +143,16 @@ async function setupWindowsFirewall(port: number): Promise<void> {
   logger.info('Setting up Windows firewall rule...');
   
   try {
-    // Remove existing rule if present
-    await execa('netsh', [
-      'advfirewall', 'firewall', 'delete', 'rule',
-      'name="LazyCraftLauncher"'
-    ], { reject: false });
-    
-    // Add new rule
-    await execa('netsh', [
-      'advfirewall', 'firewall', 'add', 'rule',
-      'name="LazyCraftLauncher"',
-      'dir=in',
-      'action=allow',
-      'protocol=TCP',
-      `localport=${port}`,
-    ]);
+    const elevated = await isElevated();
+    if (!elevated) {
+      console.log('\nAdministrator permissions required to add Windows firewall rules automatically.');
+      console.log('Right-click the launcher and choose "Run as administrator", or apply the commands below manually:\n');
+      showFirewallInstructions(port, 'windows');
+      return;
+    }
+
+    await execa('netsh', getWindowsFirewallRemoveArgs(), { reject: false });
+    await execa('netsh', getWindowsFirewallAddArgs(port));
     
     logger.info('Windows firewall rule added');
     console.log('Firewall rule added successfully');
@@ -152,19 +170,10 @@ async function setupMacFirewall(port: number): Promise<void> {
   try {
     console.log('Need sudo to add firewall rule. Don\'t worry, it\'s just for port', port);
     
-    // Try to add Java to firewall exceptions
-    await execa('sudo', [
-      '/usr/libexec/ApplicationFirewall/socketfilterfw',
-      '--add',
-      '/usr/bin/java',
-    ]);
-    
-    // Unblock Java
-    await execa('sudo', [
-      '/usr/libexec/ApplicationFirewall/socketfilterfw',
-      '--unblock',
-      '/usr/bin/java',
-    ]);
+    const commands = getMacFirewallCommands();
+    for (const args of commands) {
+      await execa('sudo', args);
+    }
     
     logger.info('Mac firewall rule added');
     console.log('Firewall configured successfully');
@@ -219,15 +228,10 @@ function showFirewallInstructions(port: number, osType: string): void {
   
   switch (osType) {
     case 'windows':
-      console.log('Run as Administrator:');
-      console.log(`netsh advfirewall firewall add rule name="LazyCraftLauncher" dir=in action=allow protocol=TCP localport=${port}`);
+      getWindowsFirewallManualSteps(port).forEach(step => console.log(step));
       break;
     case 'mac':
-      console.log('1. Open System Preferences > Security & Privacy > Firewall');
-      console.log('2. Click the lock and enter your password');
-      console.log('3. Click "Firewall Options"');
-      console.log('4. Click "+" and add Java');
-      console.log('5. Set to "Allow incoming connections"');
+      getMacFirewallManualSteps().forEach(step => console.log(step));
       break;
     case 'linux':
       console.log('Run one of these commands:');
@@ -280,10 +284,19 @@ export async function testPortReachability(
  */
 export async function removeUPnP(port: number): Promise<void> {
   try {
-    const client = new NatClient();
-    await client.unmap({
-      publicPort: port,
-      protocol: 'TCP',
+    const client = new NatAPI();
+    await new Promise<void>((resolve, reject) => {
+      client.unmap(
+        {
+          publicPort: port,
+          protocol: 'TCP',
+        },
+        (err: Error | null) => {
+          client.close();
+          if (err) reject(err);
+          else resolve();
+        }
+      );
     });
     logger.info(`Removed UPnP mapping for port ${port}`);
   } catch (error) {
@@ -298,21 +311,33 @@ export async function removeFirewallRule(osType: string): Promise<void> {
   try {
     switch (osType) {
       case 'windows':
-        await execa('netsh', [
-          'advfirewall', 'firewall', 'delete', 'rule',
-          'name="LazyCraftLauncher"'
-        ], { reject: false });
+        if (await isElevated()) {
+          await execa('netsh', getWindowsFirewallRemoveArgs(), { reject: false });
+        }
         break;
       case 'mac':
-        await execa('sudo', [
-          '/usr/libexec/ApplicationFirewall/socketfilterfw',
-          '--remove',
-          '/usr/bin/java',
-        ], { reject: false });
+        await execa('sudo', getMacFirewallRemoveCommand(), { reject: false });
         break;
     }
     logger.info('Firewall rule removed');
   } catch (error) {
     logger.error('Failed to remove firewall rule:', error);
+  }
+}
+
+async function persistNetworkInfo(info: NetworkInfo): Promise<void> {
+  try {
+    const paths = getPaths();
+    const infoPath = path.join(paths.root, '.network-info.json');
+    await fs.writeJson(
+      infoPath,
+      {
+        ...info,
+        lastChecked: new Date().toISOString(),
+      },
+      { spaces: 2 }
+    );
+  } catch (error) {
+    logger.warn('Failed to persist network info:', error);
   }
 }

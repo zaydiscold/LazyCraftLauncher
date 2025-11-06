@@ -20,7 +20,7 @@ A cross-platform Minecraft server launcher with a lightweight Terminal User Inte
   - Automatic UPnP port forwarding
   - Firewall configuration (Windows, Mac, Linux)
   - Public IP detection and port reachability testing
-  - LAN and WAN address display with QR code generation
+  - LAN and WAN address display with helpful connection tips
 - **Backup System**:
   - Automatic backups on exit
   - Rolling 7-day retention policy
@@ -56,11 +56,35 @@ Three pre-configured profiles to choose from:
    - PvP enabled
    - Minimal spawn protection (4 blocks)
 
+## Project Status
+
+- ✅ Architecture, system detection, Java bootstrap, server provisioning (Vanilla + Forge), backup engine, network automation, and Ink dashboard are implemented.
+- ✅ Profiles, server.properties templating, and the local API are wired up and functional.
+- 🔄 Remaining polish: packaging into native executables, richer player/TPS telemetry, automated update checks, and expanded test coverage.
+- 🧭 See `LazyCraftLauncher-Complete-Spec.md` for the complete roadmap and design decisions.
+
 ## Installation
 
 ### Prerequisites
 - Node.js 18+ (for running from source or npm)
 - OR download standalone executables (no Node.js required)
+
+### Option 0: Included Launch Scripts
+
+**macOS**
+```bash
+chmod +x LazyCraftLauncher.command
+./LazyCraftLauncher.command
+```
+
+**Windows**
+```
+LazyCraftLauncher.bat
+```
+
+> Tip: Right-click and choose “Run as administrator” to allow automatic firewall configuration.
+
+The helper script installs dependencies (on first run), builds the TypeScript sources, and launches the CLI.
 
 ### Option 1: NPM Global Install
 ```bash
@@ -98,10 +122,14 @@ npm install
 # Run in development mode
 npm run dev
 
-# Build executables
+# Build the CLI
 npm run build
-npm run pkg:win    # Windows
-npm run pkg:mac    # macOS
+
+# Launch compiled CLI
+npm run start
+
+# Build + run in one go
+npm run launch
 ```
 
 ## Usage
@@ -174,10 +202,10 @@ Once the server is running, the dashboard provides:
 
 **Display Panels**:
 - **Status Panel**: Server state, version, uptime, memory usage
-- **Address Panel**: LAN IP, Public IP, port, QR code for easy sharing
+- **Address Panel**: LAN / public address summaries with connection tips
 - **Network Status**:
-  - Green checkmark: Friends can connect from anywhere
-  - Yellow warning: Local-only access (with troubleshooting tips)
+  - Reachable banner: confirms friends can join from the internet
+  - Local-only banner: offers port-forwarding and VPN tips
 
 ## Configuration
 
@@ -226,7 +254,8 @@ LazyCraftLauncher/
 ├── logs/                 # Server logs by date
 │   ├── server-20251105.log
 │   └── ...
-├── temp/                 # Temporary files
+├── .temp/                # Temporary files
+├── .cache/               # Download cache
 ├── world/                # Minecraft world data
 │   ├── level.dat
 │   ├── region/
@@ -268,9 +297,9 @@ If automatic UPnP fails:
    ```
 
    **macOS**:
-   - System Preferences → Security & Privacy → Firewall
-   - Click lock, enter password
-   - Firewall Options → Add Java → Allow incoming connections
+   - System Settings → Network → Firewall
+   - Click “Options…” and unlock with your password
+   - Add `/usr/bin/java` and set to “Allow incoming connections”
 
    **Linux** (iptables):
    ```bash

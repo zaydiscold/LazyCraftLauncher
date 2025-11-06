@@ -1,64 +1,65 @@
 /**
- * Address Panel Component with QR Code
+ * Address Panel Component
  */
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Box, Text } from 'ink';
-import { generateQRCode } from '../../core/qr.js';
 import type { NetworkInfo } from '../../types/index.js';
+import { theme } from '../theme.js';
 
 interface AddressPanelProps {
   networkInfo: NetworkInfo;
 }
 
 export const AddressPanel: React.FC<AddressPanelProps> = ({ networkInfo }) => {
-  const [qrCode, setQrCode] = useState<string>('');
-
-  useEffect(() => {
-    const address = networkInfo.publicIP 
-      ? `${networkInfo.publicIP}:${networkInfo.port}`
-      : `${networkInfo.lanIP}:${networkInfo.port}`;
-    
-    generateQRCode(address, true).then(setQrCode);
-  }, [networkInfo]);
+  const lanAddress = `${networkInfo.lanIP}:${networkInfo.port}`;
+  const publicAddress = networkInfo.publicIP
+    ? `${networkInfo.publicIP}:${networkInfo.port}`
+    : null;
+  const publicColor = networkInfo.reachable ? theme.success : theme.warning;
 
   return (
     <Box flexDirection="column" borderStyle="single" paddingX={1}>
-      <Text color="cyan" bold>Connection Info</Text>
+      <Text color={theme.accent} bold>Connection Info</Text>
       
       <Box marginTop={1} flexDirection="column">
         <Box>
-          <Text>LAN IP: </Text>
-          <Text color="green">{networkInfo.lanIP}:{networkInfo.port}</Text>
+          <Text>LAN address: </Text>
+          <Text color={theme.success}>{lanAddress}</Text>
         </Box>
 
-        {networkInfo.publicIP && (
+        {publicAddress && (
           <Box>
-            <Text>Public IP: </Text>
-            <Text color={networkInfo.reachable ? 'green' : 'yellow'}>
-              {networkInfo.publicIP}:{networkInfo.port}
+            <Text>Public address: </Text>
+            <Text color={publicColor}>
+              {publicAddress}
             </Text>
           </Box>
         )}
 
         <Box marginTop={1}>
           <Text>UPnP: </Text>
-          <Text color={networkInfo.upnpSuccess ? 'green' : 'red'}>
-            {networkInfo.upnpSuccess ? 'Enabled' : 'Failed'}
+          <Text color={networkInfo.upnpSuccess ? theme.success : theme.error}>
+            {networkInfo.upnpSuccess ? 'Mapped' : 'Failed'}
           </Text>
         </Box>
 
         <Box marginTop={1}>
-          <Text>Status: </Text>
-          <Text color={networkInfo.reachable ? 'green' : 'yellow'}>
-            {networkInfo.reachable ? 'Publicly Accessible' : 'LAN Only'}
+          <Text>Reachability: </Text>
+          <Text color={publicColor}>
+            {networkInfo.reachable ? 'Publicly accessible' : 'LAN only'}
           </Text>
         </Box>
 
-        {qrCode && (
+        {!networkInfo.reachable && (
           <Box marginTop={1} flexDirection="column">
-            <Text color="gray">QR Code for mobile:</Text>
-            <Text>{qrCode}</Text>
+            <Text color={theme.warning} bold>Tips:</Text>
+            <Text color={theme.muted}>
+              • Enable UPnP, or forward TCP {networkInfo.port} to this machine.
+            </Text>
+            <Text color={theme.muted}>
+              • Alternative: share over Tailscale / VPN.
+            </Text>
           </Box>
         )}
       </Box>

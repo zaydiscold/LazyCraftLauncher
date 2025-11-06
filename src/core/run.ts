@@ -6,6 +6,7 @@
 import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import fs from 'fs-extra';
+import { execa } from 'execa';
 import { getPaths } from '../utils/paths.js';
 import { logger } from '../utils/log.js';
 import { testPortReachability } from './network.js';
@@ -221,6 +222,14 @@ async function onServerReady(config: LazyConfig): Promise<void> {
     
     if (networkInfo && networkInfo.publicIP) {
       const reachable = await testPortReachability(networkInfo.publicIP, config.port);
+      
+      networkInfo.reachable = reachable;
+      networkInfo.lastChecked = new Date().toISOString();
+      try {
+        await fs.writeJson(path.join(paths.root, '.network-info.json'), networkInfo, { spaces: 2 });
+      } catch (error) {
+        logger.warn('Failed to persist reachability status:', error);
+      }
       
       if (reachable) {
         console.log('\n✓ Your friends can connect from anywhere!');
