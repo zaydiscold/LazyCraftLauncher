@@ -110,26 +110,53 @@ async function getAdoptiumDownloadUrl(
 ): Promise<string | null> {
   try {
     const osName = platform === 'mac' ? 'mac' : platform;
-    const url = `${ADOPTIUM_API}/assets/latest/21/hotspot?architecture=${arch}&image_type=${imageType}&os=${osName}&vendor=eclipse`;
 
-    const response = await got(url, {
+    // Try the latest endpoint first - returns array with binary.package.link
+    const latestUrl = `${ADOPTIUM_API}/assets/latest/21/hotspot?architecture=${arch}&image_type=${imageType}&os=${osName}&vendor=eclipse`;
+
+    logger.info(`Fetching Java from: ${latestUrl}`);
+
+    const latestResponse = await got(latestUrl, {
       responseType: 'json',
-      followRedirect: false,
+      timeout: { request: 30000 },
     });
 
-    if (response.statusCode === 307 && response.headers.location) {
-      return response.headers.location;
+    const latestData = latestResponse.body as any;
+
+    // Check if we got a direct download link from the latest endpoint
+    if (Array.isArray(latestData) && latestData.length > 0 && latestData[0].binary?.package?.link) {
+      const downloadUrl = latestData[0].binary.package.link as string;
+      logger.info(`Found download URL from latest endpoint: ${downloadUrl}`);
+      return downloadUrl;
     }
 
+    // Fallback to feature_releases endpoint - returns array with binaries[].package.link
     const listUrl = `${ADOPTIUM_API}/assets/feature_releases/21/ga?architecture=${arch}&image_type=${imageType}&os=${osName}&vendor=eclipse&page_size=1`;
-    const listResponse = await got(listUrl, { responseType: 'json' });
+
+    logger.info(`Trying fallback endpoint: ${listUrl}`);
+
+    const listResponse = await got(listUrl, {
+      responseType: 'json',
+      timeout: { request: 30000 },
+    });
     const data = listResponse.body as any;
 
-    if (data && data.length > 0 && data[0].binary?.package?.link) {
-      return data[0].binary.package.link as string;
+    // Note: feature_releases returns data[0].binaries[0].package.link
+    if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0].binaries) && data[0].binaries.length > 0) {
+      const binary = data[0].binaries.find((b: any) => b.image_type === imageType && b.architecture === arch);
+      if (binary?.package?.link) {
+        const downloadUrl = binary.package.link as string;
+        logger.info(`Found download URL from fallback endpoint: ${downloadUrl}`);
+        return downloadUrl;
+      }
     }
+
+    logger.error('No download URL found in API responses');
   } catch (error) {
     logger.error('Error getting Adoptium download URL:', error);
+    if (error instanceof Error) {
+      logger.error('Error details:', error.message);
+    }
   }
 
   return null;
