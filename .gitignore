@@ -5,3 +5,8 @@ dist/
 coverage/
 backups/
 .jre/
+jre/
+server.jar
+eula.txt
+server.properties
+.server-metadata.json

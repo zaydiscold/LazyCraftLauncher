@@ -89,15 +89,26 @@ async function downloadJava(osType: 'windows' | 'mac' | 'linux'): Promise<string
   const directories = await fs.readdir(paths.jre);
 
   for (const dir of directories) {
-    const javaPath = path.join(paths.jre, dir, 'bin', javaExe);
+    const dirPath = path.join(paths.jre, dir);
+    const javaPath = path.join(dirPath, 'bin', javaExe);
     if (await fs.pathExists(javaPath)) {
       return javaPath;
+    }
+
+    const macJavaPath = path.join(dirPath, 'Contents', 'Home', 'bin', javaExe);
+    if (await fs.pathExists(macJavaPath)) {
+      return macJavaPath;
     }
   }
 
   const directPath = path.join(paths.jre, 'bin', javaExe);
   if (await fs.pathExists(directPath)) {
     return directPath;
+  }
+
+  const deepPath = await findJavaExecutable(paths.jre, javaExe);
+  if (deepPath) {
+    return deepPath;
   }
 
   throw new Error('Failed to find Java executable after extraction');
@@ -113,23 +124,101 @@ async function getAdoptiumDownloadUrl(
     const url = `${ADOPTIUM_API}/assets/latest/21/hotspot?architecture=${arch}&image_type=${imageType}&os=${osName}&vendor=eclipse`;
 
     const response = await got(url, {
-      responseType: 'json',
       followRedirect: false,
+      throwHttpErrors: false,
     });
 
     if (response.statusCode === 307 && response.headers.location) {
       return response.headers.location;
     }
 
-    const listUrl = `${ADOPTIUM_API}/assets/feature_releases/21/ga?architecture=${arch}&image_type=${imageType}&os=${osName}&vendor=eclipse&page_size=1`;
-    const listResponse = await got(listUrl, { responseType: 'json' });
-    const data = listResponse.body as any;
+    if (response.statusCode === 200 && response.body) {
+      const directLink = extractPackageLink(response.body);
+      if (directLink) {
+        return directLink;
+      }
+    }
 
-    if (data && data.length > 0 && data[0].binary?.package?.link) {
-      return data[0].binary.package.link as string;
+    const listUrl = `${ADOPTIUM_API}/assets/feature_releases/21/ga?architecture=${arch}&image_type=${imageType}&os=${osName}&vendor=eclipse&page_size=1`;
+    const listResponse = await got(listUrl, {
+      followRedirect: false,
+      throwHttpErrors: false,
+    });
+    const listLink = extractPackageLink(listResponse.body);
+    if (listLink) {
+      return listLink;
     }
   } catch (error) {
     logger.error('Error getting Adoptium download URL:', error);
+  }
+
+  return null;
+}
+
+function extractPackageLink(payload: unknown): string | null {
+  try {
+    const normalized = Buffer.isBuffer(payload)
+      ? payload.toString('utf8')
+      : payload;
+    const data = typeof normalized === 'string' ? JSON.parse(normalized) : normalized;
+    const findLink = (entry: any): string | null => {
+      if (!entry || typeof entry !== 'object') {
+        return null;
+      }
+
+      if (entry?.binary?.package?.link) {
+        return entry.binary.package.link as string;
+      }
+
+      if (entry?.package?.link) {
+        return entry.package.link as string;
+      }
+
+      if (Array.isArray(entry?.binaries)) {
+        for (const binary of entry.binaries) {
+          const link = findLink(binary);
+          if (link) {
+            return link;
+          }
+        }
+      }
+
+      return null;
+    };
+
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        const link = findLink(item);
+        if (link) {
+          return link;
+        }
+      }
+    } else {
+      return findLink(data);
+    }
+  } catch (error) {
+    logger.error('Error parsing Adoptium response:', error);
+  }
+
+  return null;
+}
+
+async function findJavaExecutable(root: string, javaExe: string): Promise<string | null> {
+  const stack = [root];
+
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    const entries = await fs.readdir(current, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name);
+
+      if (entry.isDirectory()) {
+        stack.push(fullPath);
+      } else if (entry.isFile() && entry.name === javaExe) {
+        return fullPath;
+      }
+    }
   }
 
   return null;
