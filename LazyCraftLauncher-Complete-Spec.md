@@ -5,8 +5,14 @@ You are generating a cross-platform Minecraft server "lazy launcher" with a ligh
 ## GOAL
 Build a Node.js app with a simple guided UI (TUI using `ink`) that lets users drag in a world folder or start new, click once, answer a few questions, and get a working multiplayer Minecraft server on Windows and macOS. Automate everything: Java, server jar, firewall, UPnP, backups, run/stop. Default to one-click success.
 
+## IMPLEMENTATION SNAPSHOT (current repo)
+- ✅ Implemented: system detection, Java bootstrap, vanilla & Forge provisioning, world validation, backup engine, Ink wizard/dashboard, local API, server status aggregation, firewall/UPnP automation (with elevation detection), handlebars-based server.properties templating, and platform helper utilities.
+- ✅ Added ready-to-run scripts (`LazyCraftLauncher.command` / `.bat`), templated game profiles, and documentation on launch flow.
+- 🔄 Outstanding: native packaging/release artifacts, richer telemetry (TPS, memory per player), automated self-update manifest flow, deeper API coverage, and comprehensive test suites.
+- 🗺️ QR code sharing has been removed in favor of textual connection helpers per latest requirements.
+
 ## SCOPE AND CHOICES
-- **Interface**: Lightweight TUI using React-based `ink` framework. Color, spinners, panels, keybindings. Provide a simple dashboard after setup with Start/Stop, Status, Players Online, IP/Port, QR code.
+- **Interface**: Lightweight TUI using React-based `ink` framework. Color, spinners, panels, keybindings. Provide a simple dashboard after setup with Start/Stop, Status, Players Online, IP/Port highlights.
 - **Runtime**: Node.js + TypeScript. Package into standalone executables for Windows and Mac. Also publish as npm global. Provide scripts to build for Linux later.
 - **Worlds**: Support both new world generation and loading an existing `world/` folder dropped next to the app. **Validate world folders** by checking for `level.dat`, `region/` directory, and other essential files before accepting.
 - **Multiplayer**: Target external multiplayer. Attempt automatic UPnP on chosen port. Show LAN IP regardless. Expose public address if reachable.
@@ -51,7 +57,7 @@ Build a Node.js app with a simple guided UI (TUI using `ink`) that lets users dr
   - Mac: `LazyCraftLauncher.app` bundle (or `LazyCraftLauncher` binary if bundle not feasible)
 - **Java bundling**: One-click experience by auto-downloading JRE on first run into local `./jre/` cache. Subsequent runs are offline.
 - **App self-update**: Provide "Check for updates" that fetches a signed manifest and offers download of a new release. Do not auto-patch running binary.
-- **Share info**: Show QR code in dashboard that encodes `ip:port`. Also print plain IP:port. If you can discover a deep link that Minecraft understands, add it later. For now, QR code and text only.
+- **Share info**: Display LAN/public connection tips and copyable addresses in the dashboard; QR flow cut per updated scope. Explore Minecraft deep links later if possible.
 
 ## UI/UX AND PERSONALITY
 - Start with ASCII art header and a little snark. Example:
@@ -72,7 +78,7 @@ Build a Node.js app with a simple guided UI (TUI using `ink`) that lets users dr
   - Server type/version
   - RAM
   - Port and reachability result
-  - LAN IP, Public IP, and QR code path
+  - LAN IP and public connection status summary
   - World path
   - EULA consent timestamp
 - **Logs**: Minimal by default. Server stdout to `logs/server-YYYYMMDD.log`. Launcher log only on error.
@@ -90,15 +96,14 @@ Build a Node.js app with a simple guided UI (TUI using `ink`) that lets users dr
 
 ## TECH STACK AND PACKAGES
 - **Language**: TypeScript
-- **CLI/UI**: `ink` (React-based TUI), `ink-text-input`, `ink-select-input`, `ink-spinner`
-- **UX**: `chalk`, `boxen`, `figlet`, `gradient-string`
-- **FS/Config**: `fs-extra`, `yaml`, `adm-zip`
-- **Networking**: `got` for downloads, `nat-api` or `nat-upnp` for UPnP, custom TCP probe for port check with `portchecker.io` API
-- **Process**: `execa` for spawning Java, capturing logs
-- **QR**: `qrcode` to render terminal QR and PNG file
-- **Packaging**: `pkg` for single-file binaries; `tsup` or `esbuild` for build; `npm` for global
-- **OS helpers**: detect OS, RAM, IPs with `os`, `systeminformation`
-- **Local API**: `fastify` or `express`
+- **CLI/UI**: `ink`, `ink-text-input`, `ink-select-input`
+- **UX**: `gradient-string`
+- **FS/Config**: `fs-extra`, `yaml`, `adm-zip`, `handlebars`
+- **Networking**: `got`, `nat-api`, `https://portchecker.io`
+- **Process**: `execa`
+- **Packaging**: `tsc` via npm scripts today (native bundles later)
+- **OS helpers**: Node `os` + light platform helper modules
+- **Local API**: `fastify`
 
 ## FILE LAYOUT
 ```
@@ -108,7 +113,7 @@ Root
 │   ├── cli.tsx                // ink app entry
 │   ├── /ui
 │   │   ├── Wizard.tsx         // ink TUI wizard component
-│   │   ├── Dashboard.tsx      // status + buttons + QR component
+│   │   ├── Dashboard.tsx      // status + buttons + connection tips
 │   │   ├── components/
 │   │   │   ├── Banner.tsx
 │   │   │   ├── StatusPanel.tsx
@@ -118,16 +123,14 @@ Root
 │   ├── /core
 │   │   ├── detect.ts          // OS, RAM, Java detection
 │   │   ├── java.ts            // ensureTemurin(), path resolving
-│   │   ├── downloads.ts       // fetch vanilla or forge installers
-│   │   ├── serverJar.ts       // resolve latest recommended vs manual
-│   │   ├── props.ts           // generate server.properties
+│   │   ├── downloads.ts       // generic download helpers + checksum
+│   │   ├── serverJar.ts       // provision vanilla/forge jars + properties
 │   │   ├── eula.ts            // show link, write eula.txt
 │   │   ├── config.ts          // read/write .lazycraft.yml
 │   │   ├── world.ts           // new vs existing, validation (level.dat, region/)
 │   │   ├── network.ts         // UPnP, port test, firewall rules
 │   │   ├── run.ts             // start/stop server, capture logs
 │   │   ├── backup.ts          // zip world on exit, retention=7
-│   │   ├── qr.ts              // generate QR png + terminal block
 │   │   ├── report.ts          // setup-report.txt
 │   │   ├── status.ts          // poll server console for ready msg, parse
 │   │   └── api.ts             // local JSON API on 127.0.0.1:8765
@@ -161,8 +164,9 @@ Root
 - Ensure server jar for chosen type/version. If missing, fetch latest recommended for that type.
 - Attempt UPnP on chosen port.
 - Add firewall rule or print exact command/instructions.
+- If Windows elevation not detected, prompt user to rerun with Administrator rights before attempting auto firewall.
 - Start server with `java -Xms{X}G -Xmx{Y}G -jar server.jar nogui`.
-- Watch logs for "Done" line. Then render dashboard with IPs, reachability, QR. Minimal snark line.
+- Watch logs for "Done" line. Then render dashboard with connection summary. Minimal snark line.
 
 ### 2) Advanced Setup Wizard (ink TUI)
 - Select **Server Type**: Vanilla or Forge
@@ -177,7 +181,7 @@ Root
 
 ### 3) Dashboard (ink TUI)
 - **Panels**: Status (Starting/Running/Stopping), Players Online, Memory/TPS if available
-- **Addresses**: LAN IP, Public IP, Port, QR code path
+- **Addresses**: LAN IP, Public IP, Port, reachability tips
 - **Buttons/Hotkeys**: [S]tart, S[t]op, [B]ackup, [R]estart, [O]pen folder, [Q]uit
 - **Footer line**: "UPnP status: ok/failed. Firewall: added/manual."
 - On Quit, perform world save and backup zip.
@@ -185,13 +189,13 @@ Root
 ## DOWNLOADING JARS
 
 ### Vanilla
-- Use Mojang version manifest (`https://launchermeta.mojang.com/mc/game/version_manifest.json`) to resolve the latest release version.
-- Download server jar into `./server/vanilla-{ver}.jar` and symlink/copy to `server.jar`.
+- Use Mojang version manifest (`https://launchermeta.mojang.com/mc/game/version_manifest_v2.json`) to resolve the latest release version.
+- Download server jar directly to `./server.jar`, recording SHA-1 in metadata for reuse.
 
 ### Forge
-- Download Forge installer for the selected MC version from official Forge Maven.
-- Run Forge installer jar with `--installServer` flag headless to produce the server runnable jar in `./server`.
-- Name `forge-{ver}.jar` and symlink/copy to `server.jar`.
+- Download Forge server jar if available; otherwise fetch installer from the Forge Maven.
+- Run installer with `--installServer` in-place when needed, then promote the produced `forge-*-server.jar` to `./server.jar`.
+- Persist metadata with Minecraft + Forge version identifiers.
 
 ## SERVER.PROPERTIES TEMPLATE KEYS
 Generate from profiles with these keys:

@@ -1,0 +1,21 @@
+name: "Creative Flat"
+description: "Flat world creative sandbox with flight and peaceful mode."
+server:
+  motd: "LazyCraft Creative Playground"
+  difficulty: peaceful
+  gamemode: creative
+  spawn-protection: 0
+  pvp: false
+  max-players: 10
+  allow-flight: true
+  allow-nether: false
+  view-distance: 8
+  simulation-distance: 8
+  level-type: flat
+  spawn-npcs: true
+  spawn-animals: false
+  spawn-monsters: false
+  white-list: false
+  force-gamemode: true
+  enable-command-block: true
+  online-mode: true

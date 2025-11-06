@@ -10,6 +10,12 @@ import { Banner } from './components/Banner.js';
 import { validateWorld } from '../core/world.js';
 import type { LazyConfig, SystemInfo, WizardAnswers } from '../types/index.js';
 
+type SelectItem = {
+  label: string;
+  value: string;
+  disabled?: boolean;
+};
+
 interface WizardProps {
   savedConfig: LazyConfig | null;
   systemInfo: SystemInfo;
@@ -36,8 +42,37 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleModeSelect = (item: any) => {
-    const newAnswers = { ...answers, mode: item.value };
+  type ModeValue = 'quick' | 'advanced';
+  type ServerTypeValue = 'vanilla' | 'forge' | 'fabric' | 'paper';
+  type WorldChoiceValue = 'new' | 'existing';
+  type ProfileValue = 'survival-default' | 'creative-flat' | 'hardcore-minimal';
+
+  const modeItems: Array<SelectItem & { value: ModeValue }> = [
+    { label: 'Quick Launch - Use saved settings', value: 'quick', disabled: !savedConfig },
+    { label: 'Advanced Setup - Configure everything', value: 'advanced' },
+  ];
+
+  const serverTypeItems: Array<SelectItem & { value: ServerTypeValue }> = [
+    { label: 'Vanilla - Pure Minecraft', value: 'vanilla' },
+    { label: 'Forge - Modded server', value: 'forge' },
+    { label: 'Fabric - (Coming soon)', value: 'fabric', disabled: true },
+    { label: 'Paper - (Coming soon)', value: 'paper', disabled: true },
+  ];
+
+  const worldItems: Array<SelectItem & { value: WorldChoiceValue }> = [
+    { label: 'Create new world', value: 'new' },
+    { label: 'Use existing world folder', value: 'existing' },
+  ];
+
+  const profileItems: Array<SelectItem & { value: ProfileValue }> = [
+    { label: 'Survival Default - Normal survival gameplay', value: 'survival-default' },
+    { label: 'Creative Flat - Peaceful creative mode', value: 'creative-flat' },
+    { label: 'Hardcore Minimal - Hard difficulty, one life', value: 'hardcore-minimal' },
+  ];
+
+  const handleModeSelect = (item: (typeof modeItems)[number]) => {
+    const mode = item.value;
+    const newAnswers: WizardAnswers = { ...answers, mode };
     setAnswers(newAnswers);
     
     if (item.value === 'quick' && savedConfig) {
@@ -59,8 +94,10 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
     }
   };
 
-  const handleServerTypeSelect = (item: any) => {
-    setAnswers({ ...answers, serverType: item.value });
+  const handleServerTypeSelect = (item: (typeof serverTypeItems)[number]) => {
+    if (item.disabled) return;
+    const serverType = item.value as LazyConfig['serverType'];
+    setAnswers(prev => ({ ...prev, serverType }));
     setStep('version');
   };
 
@@ -70,12 +107,13 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
     setStep('world');
   };
 
-  const handleWorldSelect = (item: any) => {
-    setAnswers({ ...answers, worldChoice: item.value });
+  const handleWorldSelect = (item: (typeof worldItems)[number]) => {
+    const choice = item.value;
+    setAnswers(prev => ({ ...prev, worldChoice: choice }));
     if (item.value === 'existing') {
       setStep('worldPath');
     } else {
-      setAnswers({ ...answers, worldPath: './world' });
+      setAnswers(prev => ({ ...prev, worldPath: './world' }));
       setStep('ram');
     }
   };
@@ -126,12 +164,12 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
     setStep('profile');
   };
 
-  const handleProfileSelect = (item: any) => {
-    setAnswers({ ...answers, profile: item.value });
+  const handleProfileSelect = (item: (typeof profileItems)[number]) => {
+    setAnswers(prev => ({ ...prev, profile: item.value }));
     setStep('advanced');
   };
 
-  const handleAdvancedSelect = (item: any) => {
+  const handleAdvancedSelect = (item: SelectItem) => {
     const [key, value] = item.value.split(':');
     setAnswers({ ...answers, [key]: value === 'true' });
     
@@ -140,7 +178,7 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
     }
   };
 
-  const handleConfirm = (item: any) => {
+  const handleConfirm = (item: SelectItem) => {
     if (item.value === 'yes') {
       onComplete(answers);
     } else {
@@ -164,10 +202,7 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
             <Text color="cyan" bold>Choose Launch Mode:</Text>
             <Box marginTop={1}>
               <SelectInput
-                items={[
-                  { label: 'Quick Launch - Use saved settings', value: 'quick', disabled: !savedConfig },
-                  { label: 'Advanced Setup - Configure everything', value: 'advanced' }
-                ]}
+                items={modeItems as any}
                 onSelect={handleModeSelect}
               />
             </Box>
@@ -179,12 +214,7 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
             <Text color="cyan" bold>Select Server Type:</Text>
             <Box marginTop={1}>
               <SelectInput
-                items={[
-                  { label: 'Vanilla - Pure Minecraft', value: 'vanilla' },
-                  { label: 'Forge - Modded server', value: 'forge' },
-                  { label: 'Fabric - (Coming soon)', value: 'fabric', disabled: true },
-                  { label: 'Paper - (Coming soon)', value: 'paper', disabled: true }
-                ]}
+                items={serverTypeItems as any}
                 onSelect={handleServerTypeSelect}
               />
             </Box>
@@ -210,10 +240,7 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
             <Text color="cyan" bold>World Setup:</Text>
             <Box marginTop={1}>
               <SelectInput
-                items={[
-                  { label: 'Create new world', value: 'new' },
-                  { label: 'Use existing world folder', value: 'existing' }
-                ]}
+                items={worldItems as any}
                 onSelect={handleWorldSelect}
               />
             </Box>
@@ -267,11 +294,7 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
             <Text color="cyan" bold>Game Profile:</Text>
             <Box marginTop={1}>
               <SelectInput
-                items={[
-                  { label: 'Survival Default - Normal survival gameplay', value: 'survival-default' },
-                  { label: 'Creative Flat - Peaceful creative mode', value: 'creative-flat' },
-                  { label: 'Hardcore Minimal - Hard difficulty, one life', value: 'hardcore-minimal' }
-                ]}
+                items={profileItems as any}
                 onSelect={handleProfileSelect}
               />
             </Box>
@@ -286,7 +309,7 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
                 items={[
                   { label: `UPnP Port Forwarding: ${answers.upnp !== false ? 'Enabled' : 'Disabled'}`, value: `upnp:${answers.upnp !== false}` },
                   { label: `Backup on Exit: ${answers.backup !== false ? 'Enabled' : 'Disabled'}`, value: `backup:${answers.backup !== false}` }
-                ]}
+                ] as SelectItem[]}
                 onSelect={handleAdvancedSelect}
               />
             </Box>
@@ -309,7 +332,7 @@ export const Wizard: React.FC<WizardProps> = ({ savedConfig, systemInfo, onCompl
                 items={[
                   { label: 'Yes, launch server!', value: 'yes' },
                   { label: 'No, start over', value: 'no' }
-                ]}
+                ] as SelectItem[]}
                 onSelect={handleConfirm}
               />
             </Box>

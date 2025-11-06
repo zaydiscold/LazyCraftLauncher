@@ -57,6 +57,10 @@ Backups are saved in the backups/ directory
       });
     }
 
+    const supportsRawMode = Boolean(
+      process.stdin.isTTY && typeof (process.stdin as any).setRawMode === 'function'
+    );
+
     if (isAPIOnly) {
       // API-only mode
       console.log('Starting LazyCraftLauncher API on http://127.0.0.1:8765');
@@ -70,6 +74,12 @@ Backups are saved in the backups/ directory
         process.exit(0);
       });
     } else {
+      if (!supportsRawMode) {
+        console.error('Interactive mode requires a TTY with raw mode support.');
+        console.error('Run this launcher from a terminal window, or use `lazycraft --quick`.');
+        process.exit(1);
+      }
+
       // Launch interactive UI
       const { waitUntilExit } = render(
         React.createElement(App, { quickMode: isQuickMode })
