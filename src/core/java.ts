@@ -88,18 +88,49 @@ async function downloadJava(osType: 'windows' | 'mac' | 'linux'): Promise<string
   const javaExe = osType === 'windows' ? 'java.exe' : 'java';
   const directories = await fs.readdir(paths.jre);
 
+  // Try multiple possible locations
   for (const dir of directories) {
-    const javaPath = path.join(paths.jre, dir, 'bin', javaExe);
-    if (await fs.pathExists(javaPath)) {
-      return javaPath;
+    // macOS app bundle structure: jdk-21.0.9+10-jre/Contents/Home/bin/java
+    if (osType === 'mac') {
+      const macPath = path.join(paths.jre, dir, 'Contents', 'Home', 'bin', javaExe);
+      if (await fs.pathExists(macPath)) {
+        logger.info(`Found Java in macOS app bundle: ${macPath}`);
+        return macPath;
+      }
+    }
+
+    // Standard structure: jdk-21.0.9+10-jre/bin/java
+    const standardPath = path.join(paths.jre, dir, 'bin', javaExe);
+    if (await fs.pathExists(standardPath)) {
+      logger.info(`Found Java in standard location: ${standardPath}`);
+      return standardPath;
+    }
+
+    // Check nested directories (recursive search - one level deep)
+    try {
+      const subDirs = await fs.readdir(path.join(paths.jre, dir));
+      for (const subDir of subDirs) {
+        const nestedPath = path.join(paths.jre, dir, subDir, 'bin', javaExe);
+        if (await fs.pathExists(nestedPath)) {
+          logger.info(`Found Java in nested location: ${nestedPath}`);
+          return nestedPath;
+        }
+      }
+    } catch (err) {
+      // Not a directory, skip
     }
   }
 
+  // Direct path fallback
   const directPath = path.join(paths.jre, 'bin', javaExe);
   if (await fs.pathExists(directPath)) {
+    logger.info(`Found Java in direct location: ${directPath}`);
     return directPath;
   }
 
+  logger.error('Java executable not found in any expected location');
+  logger.error(`Searched in: ${paths.jre}`);
+  logger.error(`Directories found: ${directories.join(', ')}`);
   throw new Error('Failed to find Java executable after extraction');
 }
 
