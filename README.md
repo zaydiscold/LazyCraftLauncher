@@ -1,6 +1,8 @@
 # LazyCraftLauncher
 
-**"You ask play game , i make game for you."**
+AHHHHHHHHHHHH
+COME TO THE CHINESE PEPTIDE RAVE DEC 13
+
 
 Cross-platform Minecraft server automation. Handles Java installation, network configuration, firewall rules, and port forwarding. You run a binary. It does the rest. No technical knowledge required, which is probably for the best.
 
