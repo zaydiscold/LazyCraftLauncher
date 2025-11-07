@@ -116,13 +116,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </Box>
 
       {networkInfo.reachable ? (
-        <Box marginTop={1}>
-          <Text color="green" bold>✓ Your friends can connect!</Text>
+        <Box marginTop={1} flexDirection="column">
+          <Text color="green" bold>✓ Server is publicly accessible!</Text>
+          <Text color="gray">Friends anywhere can connect using: {networkInfo.publicIP}:{networkInfo.port}</Text>
         </Box>
       ) : (
         <Box marginTop={1} flexDirection="column">
-          <Text color="yellow" bold>⚠ Local only access</Text>
-          <Text color="gray">Try: UPnP in router, manual port forward, or Tailscale</Text>
+          <Text color="yellow" bold>⚠️  Server is LAN-only (local network)</Text>
+          <Text color="gray">For internet access, see troubleshooting steps in Connection Info panel →</Text>
+          {!networkInfo.upnpSuccess && (
+            <Text color="gray">UPnP failed - you may need to configure your router manually</Text>
+          )}
         </Box>
       )}
     </Box>
