@@ -186,27 +186,6 @@ To use an existing Minecraft world:
 - Must contain `region/` directory
 - Optional but recommended: `data/`, `playerdata/`, `level.dat_old`
 
-### Dashboard Controls
-
-Once the server is running, the dashboard provides:
-
-**Keyboard Shortcuts**:
-- Arrow Keys: Navigate between actions
-- Enter: Execute selected action
-- Q or Esc: Stop server and quit
-
-**Available Actions**:
-- **Restart**: Gracefully restart the server
-- **Backup**: Create immediate backup (saved to `backups/`)
-- **Stop**: Stop server with automatic backup (if enabled)
-
-**Display Panels**:
-- **Status Panel**: Server state, version, uptime, memory usage
-- **Address Panel**: LAN / public address summaries with connection tips
-- **Network Status**:
-  - Reachable banner: confirms friends can join from the internet
-  - Local-only banner: offers port-forwarding and VPN tips
-
 ## Configuration
 
 Configuration is saved in `.lazycraft.yml` in the launcher directory.
