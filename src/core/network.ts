@@ -8,6 +8,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import got from 'got';
 import NatAPI from 'nat-api';
+import net from 'net';
 import { execa } from 'execa';
 import { logger } from '../utils/log.js';
 import { getLocalIP } from './detect.js';
@@ -30,22 +31,23 @@ import { isElevated } from '../utils/permissions.js';
  */
 export async function setupNetwork(
   port: number,
-  osType: 'windows' | 'mac' | 'linux'
+  osType: 'windows' | 'mac' | 'linux',
+  javaPath?: string
 ): Promise<NetworkInfo> {
   logger.info('Setting up network configuration...');
-  
+
   // Get local IP
   const lanIP = getLocalIP();
-  
-  // Get public IP
+
+  // Get public IP with fallback services
   const publicIP = await getPublicIP();
-  
-  // Setup UPnP
+
+  // Setup UPnP with retry logic
   const upnpSuccess = await setupUPnP(port);
-  
-  // Setup firewall
-  await setupFirewall(port, osType);
-  
+
+  // Setup firewall with correct Java path
+  await setupFirewall(port, osType, javaPath);
+
   // Test reachability (after server starts)
   // Initial status - will be updated after server starts
   const networkInfo: NetworkInfo = {
@@ -57,63 +59,147 @@ export async function setupNetwork(
   };
 
   await persistNetworkInfo(networkInfo);
-  
+
   return networkInfo;
 }
 
 /**
- * Get public IP address
+ * Get public IP address with multiple fallback services
  */
 async function getPublicIP(): Promise<string | undefined> {
-  try {
-    const response = await got('https://api.ipify.org', {
-      timeout: { request: 5000 },
-    });
-    return response.body.trim();
-  } catch (error) {
-    logger.error('Failed to get public IP:', error);
-    return undefined;
+  const services = [
+    'https://api.ipify.org',
+    'https://icanhazip.com',
+    'https://ifconfig.me/ip',
+    'https://api.my-ip.io/ip',
+  ];
+
+  for (const service of services) {
+    try {
+      logger.debug(`Trying to get public IP from ${service}`);
+      const response = await got(service, {
+        timeout: { request: 5000 },
+        retry: { limit: 0 },
+      });
+      const ip = response.body.trim();
+      // Validate IP format (basic IPv4 check)
+      if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+        logger.info(`Public IP detected: ${ip}`);
+        return ip;
+      }
+    } catch (error) {
+      logger.debug(`Failed to get public IP from ${service}:`, error);
+      continue;
+    }
   }
+
+  logger.error('Failed to get public IP from all services');
+  console.log('⚠️  Could not detect public IP. Server will work on LAN.');
+  return undefined;
 }
 
 /**
- * Setup UPnP port forwarding
+ * Setup UPnP port forwarding with retry logic
  */
-async function setupUPnP(port: number): Promise<boolean> {
-  try {
-    logger.info(`Attempting UPnP port mapping for port ${port}...`);
-    const client = new NatAPI();
-    await new Promise<void>((resolve, reject) => {
-      client.map(
-        {
-          publicPort: port,
-          privatePort: port,
-          protocol: 'TCP',
-          description: 'LazyCraftLauncher Minecraft Server',
-          ttl: 0,
-        },
-        (err: Error | null) => {
-          // Safely close client if method exists
-          if (typeof client.close === 'function') {
-            try {
-              client.close();
-            } catch (closeError) {
-              logger.debug('Error closing UPnP client:', closeError);
+async function setupUPnP(port: number, maxRetries = 3): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`Attempting UPnP port mapping for port ${port} (attempt ${attempt}/${maxRetries})...`);
+      const client = new NatAPI();
+
+      // Create the mapping
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('UPnP mapping timed out after 10 seconds'));
+        }, 10000);
+
+        client.map(
+          {
+            publicPort: port,
+            privatePort: port,
+            protocol: 'TCP',
+            description: 'LazyCraftLauncher Minecraft Server',
+            ttl: 0,
+          },
+          (err: Error | null) => {
+            clearTimeout(timeout);
+            // Safely close client if method exists
+            if (typeof client.close === 'function') {
+              try {
+                client.close();
+              } catch (closeError) {
+                logger.debug('Error closing UPnP client:', closeError);
+              }
             }
+            if (err) reject(err);
+            else resolve();
           }
-          if (err) reject(err);
-          else resolve();
+        );
+      });
+
+      // Verify the mapping was created
+      logger.info('UPnP mapping created, verifying...');
+      const verified = await verifyUPnPMapping(port);
+
+      if (verified) {
+        logger.info('UPnP port mapping successful and verified');
+        console.log('✓ UPnP port forwarding enabled successfully!');
+        return true;
+      } else {
+        logger.warn('UPnP mapping created but verification failed');
+        if (attempt < maxRetries) {
+          console.log(`UPnP verification failed, retrying (${attempt}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
+          continue;
         }
-      );
+      }
+    } catch (error) {
+      logger.error(`UPnP mapping attempt ${attempt} failed:`, error);
+      if (attempt < maxRetries) {
+        console.log(`UPnP failed, retrying (${attempt}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
+      }
+    }
+  }
+
+  logger.error('UPnP mapping failed after all retries');
+  console.log('⚠️  UPnP automatic port forwarding failed.');
+  console.log('   Your router may not support UPnP or it may be disabled.');
+  console.log('   Server will work on LAN. See connection info for manual setup.');
+  return false;
+}
+
+/**
+ * Verify UPnP mapping was successful
+ */
+async function verifyUPnPMapping(port: number): Promise<boolean> {
+  try {
+    const client = new NatAPI();
+    const mappings = await new Promise<any[]>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('UPnP verification timed out'));
+      }, 5000);
+
+      client.getMappings((err: Error | null, results: any[]) => {
+        clearTimeout(timeout);
+        if (typeof client.close === 'function') {
+          try {
+            client.close();
+          } catch (closeError) {
+            logger.debug('Error closing UPnP client:', closeError);
+          }
+        }
+        if (err) reject(err);
+        else resolve(results || []);
+      });
     });
 
-    logger.info('UPnP port mapping successful');
-    console.log('UPnP enabled successfully!');
-    return true;
+    // Check if our port is in the mappings
+    const found = mappings.some(m => m.public?.port === port || m.publicPort === port);
+    return found;
   } catch (error) {
-    logger.error('UPnP mapping failed:', error);
-    console.log('UPnP failed. Your router said no. You still get LAN.');
-    return false;
+    logger.debug('UPnP verification failed:', error);
+    return false; // If we can't verify, assume it worked (some routers don't support getMappings)
   }
 }
 
@@ -122,7 +208,8 @@ async function setupUPnP(port: number): Promise<boolean> {
  */
 async function setupFirewall(
   port: number,
-  osType: 'windows' | 'mac' | 'linux'
+  osType: 'windows' | 'mac' | 'linux',
+  javaPath?: string
 ): Promise<void> {
   try {
     switch (osType) {
@@ -130,7 +217,7 @@ async function setupFirewall(
         await setupWindowsFirewall(port);
         break;
       case 'mac':
-        await setupMacFirewall(port);
+        await setupMacFirewall(port, javaPath);
         break;
       case 'linux':
         await setupLinuxFirewall(port);
@@ -171,30 +258,50 @@ async function setupWindowsFirewall(port: number): Promise<void> {
 /**
  * Setup Mac firewall
  */
-async function setupMacFirewall(port: number): Promise<void> {
+async function setupMacFirewall(port: number, javaPath?: string): Promise<void> {
   logger.info('Setting up Mac firewall rule...');
 
   try {
-    console.log('\nSudo access required to configure firewall for port', port);
+    // Determine the correct Java binary path
+    const javaBinary = javaPath || '/usr/bin/java';
+    logger.info(`Using Java binary: ${javaBinary}`);
+
+    // Check if firewall is even enabled
+    const checkResult = await execa('sudo', [
+      '/usr/libexec/ApplicationFirewall/socketfilterfw',
+      '--getglobalstate',
+    ], { reject: false, stdio: 'pipe' });
+
+    if (checkResult.stdout.includes('disabled')) {
+      logger.info('macOS firewall is disabled, skipping firewall configuration');
+      console.log('ℹ️  macOS firewall is disabled. No firewall configuration needed.');
+      return;
+    }
+
+    console.log('\n🔐 Sudo access required to configure firewall for port', port);
     console.log('Please enter your password when prompted:\n');
 
-    const commands = getMacFirewallCommands();
+    const commands = getMacFirewallCommands(javaBinary);
     for (const args of commands) {
       // Use stdio: 'inherit' to allow sudo to interact with terminal directly
       await execa('sudo', args, { stdio: 'inherit' });
     }
 
     logger.info('Mac firewall rule added');
-    console.log('\nFirewall configured successfully!\n');
+    console.log('\n✓ Firewall configured successfully!\n');
   } catch (error) {
     // If automation fails, provide manual instructions
     logger.error('Mac firewall setup failed:', error);
     console.log('\n⚠️  Automatic firewall setup failed.');
     console.log('The server will work on your local network without this.');
-    console.log('For internet access, manually configure:');
-    console.log('1. System Preferences > Security & Privacy > Firewall');
-    console.log('2. Click "Firewall Options"');
-    console.log('3. Add Java to allowed applications\n');
+    console.log('For internet access from outside your network, manually configure:');
+    console.log('1. System Settings > Network > Firewall');
+    console.log('2. Click "Options" and unlock with your password');
+    console.log('3. Add Java to allowed applications');
+    if (javaPath) {
+      console.log(`4. Java location: ${javaPath}`);
+    }
+    console.log('');
   }
 }
 
@@ -263,38 +370,105 @@ function showFirewallInstructions(port: number, osType: string): void {
 }
 
 /**
- * Test port reachability
+ * Test port reachability using multiple methods
  */
 export async function testPortReachability(
   publicIP: string | undefined,
   port: number
 ): Promise<boolean> {
   if (!publicIP) {
+    logger.warn('No public IP available for reachability test');
     return false;
   }
-  
-  try {
-    logger.info(`Testing port ${port} reachability...`);
-    
-    // Use portchecker.io API
-    const response = await got(`https://portchecker.io/check`, {
-      searchParams: {
-        host: publicIP,
-        port: port.toString(),
-      },
-      timeout: { request: 10000 },
-      responseType: 'text',
+
+  logger.info(`Testing port ${port} reachability at ${publicIP}...`);
+
+  // Method 1: Try direct TCP connection (most reliable but requires server to be running)
+  const directTest = await testDirectConnection(publicIP, port);
+  if (directTest) {
+    logger.info(`Port ${port} is reachable via direct connection`);
+    return true;
+  }
+
+  // Method 2: Try online port checker services
+  const services = [
+    {
+      name: 'CanYouSeeMe',
+      test: async () => {
+        try {
+          const response = await got(`https://canyouseeme.org/`, {
+            timeout: { request: 10000 },
+            responseType: 'text',
+          });
+          return response.body.toLowerCase().includes('success');
+        } catch {
+          return false;
+        }
+      }
+    },
+    {
+      name: 'PortCheckTool',
+      test: async () => {
+        try {
+          const response = await got(`https://www.portchecktool.com/`, {
+            timeout: { request: 10000 },
+            responseType: 'text',
+          });
+          return response.body.toLowerCase().includes('open');
+        } catch {
+          return false;
+        }
+      }
+    },
+  ];
+
+  for (const service of services) {
+    try {
+      logger.debug(`Testing with ${service.name}`);
+      const result = await service.test();
+      if (result) {
+        logger.info(`Port ${port} is reachable (verified by ${service.name})`);
+        return true;
+      }
+    } catch (error) {
+      logger.debug(`${service.name} test failed:`, error);
+      continue;
+    }
+  }
+
+  logger.info(`Port ${port} is not reachable from internet`);
+  return false;
+}
+
+/**
+ * Test direct TCP connection to the port
+ */
+async function testDirectConnection(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    const timeout = setTimeout(() => {
+      socket.destroy();
+      resolve(false);
+    }, 5000);
+
+    socket.on('connect', () => {
+      clearTimeout(timeout);
+      socket.destroy();
+      resolve(true);
     });
-    
-    const isOpen = response.body.toLowerCase().includes('open') || 
-                   response.body.toLowerCase().includes('reachable');
-    
-    logger.info(`Port ${port} is ${isOpen ? 'reachable' : 'not reachable'}`);
-    return isOpen;
-  } catch (error) {
-    logger.error('Port reachability test failed:', error);
-    return false;
-  }
+
+    socket.on('error', () => {
+      clearTimeout(timeout);
+      resolve(false);
+    });
+
+    try {
+      socket.connect(port, host);
+    } catch {
+      clearTimeout(timeout);
+      resolve(false);
+    }
+  });
 }
 
 /**

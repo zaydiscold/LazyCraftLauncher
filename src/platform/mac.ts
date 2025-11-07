@@ -2,17 +2,17 @@
  * macOS specific helper functions
  */
 
-export function getMacFirewallCommands(): string[][] {
+export function getMacFirewallCommands(javaPath = '/usr/bin/java'): string[][] {
   return [
     [
       '/usr/libexec/ApplicationFirewall/socketfilterfw',
       '--add',
-      '/usr/bin/java',
+      javaPath,
     ],
     [
       '/usr/libexec/ApplicationFirewall/socketfilterfw',
       '--unblock',
-      '/usr/bin/java',
+      javaPath,
     ],
   ];
 }

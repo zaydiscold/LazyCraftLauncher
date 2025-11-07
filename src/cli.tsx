@@ -91,7 +91,7 @@ export const App: React.FC<AppProps> = ({ quickMode = false }) => {
 
       // Step 4: Setup networking
       setSetupProgress('Configuring network...');
-      const netInfo = await setupNetwork(cfg.port, sysInfo.os);
+      const netInfo = await setupNetwork(cfg.port, sysInfo.os, cfg.javaPath);
       setNetworkInfo(netInfo);
 
       // Step 5: Start server

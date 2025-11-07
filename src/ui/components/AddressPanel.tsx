@@ -72,13 +72,24 @@ export const AddressPanel: React.FC<AddressPanelProps> = ({ networkInfo }) => {
 
         {!networkInfo.reachable && (
           <Box marginTop={1} flexDirection="column">
-            <Text color={theme.warning} bold>Need internet access?</Text>
-            <Text color={theme.muted}>
-              • Forward port {networkInfo.port} in router
-            </Text>
-            <Text color={theme.muted}>
-              • Or use Tailscale/VPN
-            </Text>
+            <Text color={theme.warning} bold>🌐 Need Internet Access?</Text>
+            <Text color={theme.muted} dimColor> </Text>
+            <Text color={theme.muted}>To allow friends outside your network to connect:</Text>
+            <Text color={theme.muted}> </Text>
+            <Text color={theme.accent}>1. Manual Port Forwarding:</Text>
+            <Text color={theme.muted}>   • Log into your router (usually 192.168.1.1)</Text>
+            <Text color={theme.muted}>   • Find "Port Forwarding" settings</Text>
+            <Text color={theme.muted}>   • Forward port {networkInfo.port} (TCP) to {networkInfo.lanIP}</Text>
+            <Text color={theme.muted}> </Text>
+            <Text color={theme.accent}>2. Enable UPnP on Router:</Text>
+            <Text color={theme.muted}>   • Log into router settings</Text>
+            <Text color={theme.muted}>   • Enable UPnP/NAT-PMP</Text>
+            <Text color={theme.muted}>   • Restart launcher</Text>
+            <Text color={theme.muted}> </Text>
+            <Text color={theme.accent}>3. Use VPN (Easiest):</Text>
+            <Text color={theme.muted}>   • Install Tailscale/ZeroTier/Hamachi</Text>
+            <Text color={theme.muted}>   • All players join same network</Text>
+            <Text color={theme.muted}>   • Use LAN address: {networkInfo.lanIP}:{networkInfo.port}</Text>
           </Box>
         )}
       </Box>
