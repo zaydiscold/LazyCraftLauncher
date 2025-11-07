@@ -1,6 +1,6 @@
 # LazyCraftLauncher
 
-**"You ask to play, we host for you."**
+**"You ask play game , i make game for you."**
 
 A cross-platform Minecraft server launcher with a lightweight Terminal User Interface (TUI) that automates everything needed to run a multiplayer Minecraft server. No technical expertise required—just drag, click, and play.
 
