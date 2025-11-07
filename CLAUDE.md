@@ -338,6 +338,11 @@ Uses `nat-api` library to discover router and create port mapping:
 - Description: "LazyCraftLauncher Minecraft Server"
 - TTL: 0 (permanent until router reboot)
 
+**Recent Fixes** (2025-11):
+- Added safe cleanup: Checks if `client.close()` method exists before calling
+- Prevents crash from library version incompatibilities
+- Gracefully handles missing cleanup methods with try-catch
+
 **Firewall Configuration**:
 
 **Windows** (`setupWindowsFirewall`):
@@ -605,16 +610,30 @@ async function ensureJava(systemInfo: SystemInfo): Promise<string>
 
 **Download Process**:
 1. Detects OS and architecture (x64, arm64)
-2. Constructs download URL for Adoptium API
-3. Shows progress bar during download
-4. Extracts archive (tar.gz for Unix, zip for Windows)
-5. Sets executable permissions on Unix systems
-6. Returns path to Java binary
+2. Queries Adoptium API using two endpoints:
+   - Primary: `/assets/latest/21/hotspot` - Returns array with `binary.package.link`
+   - Fallback: `/assets/feature_releases/21/ga` - Returns `binaries[].package.link` structure
+3. Parses JSON response directly (no longer relies on 307 redirects)
+4. Shows progress bar during download
+5. Extracts archive (tar.gz for Unix, zip for Windows)
+6. Sets executable permissions on Unix systems
+7. Locates Java binary using platform-specific search:
+   - macOS: Checks `Contents/Home/bin/java` (app bundle structure)
+   - Standard: Checks `bin/java` directly
+   - Fallback: Recursive search through extracted directories
+8. Returns path to Java binary
 
 **Java Path Resolution**:
-- Windows: `./jre/bin/java.exe`
-- Unix: `./jre/bin/java`
+- Windows: `./jre/<jdk-dir>/bin/java.exe`
+- macOS: `./jre/<jdk-dir>/Contents/Home/bin/java` (app bundle)
+- Linux: `./jre/<jdk-dir>/bin/java`
 - System: `java` (if found in PATH)
+
+**Recent Fixes** (2025-11):
+- Fixed Adoptium API response parsing to handle different JSON structures
+- Added macOS-specific path resolution for app bundle structure
+- Implemented recursive search fallback for changing extraction layouts
+- Added 30-second timeout for API requests
 
 **User Messages**:
 - "No Java found. Predictable. Fetching a JRE so you don't have to Google it."

@@ -93,13 +93,20 @@ async function setupUPnP(port: number): Promise<boolean> {
           ttl: 0,
         },
         (err: Error | null) => {
-          client.close();
+          // Safely close client if method exists
+          if (typeof client.close === 'function') {
+            try {
+              client.close();
+            } catch (closeError) {
+              logger.debug('Error closing UPnP client:', closeError);
+            }
+          }
           if (err) reject(err);
           else resolve();
         }
       );
     });
-  
+
     logger.info('UPnP port mapping successful');
     console.log('UPnP enabled successfully!');
     return true;
@@ -292,7 +299,14 @@ export async function removeUPnP(port: number): Promise<void> {
           protocol: 'TCP',
         },
         (err: Error | null) => {
-          client.close();
+          // Safely close client if method exists
+          if (typeof client.close === 'function') {
+            try {
+              client.close();
+            } catch (closeError) {
+              logger.debug('Error closing UPnP client:', closeError);
+            }
+          }
           if (err) reject(err);
           else resolve();
         }
