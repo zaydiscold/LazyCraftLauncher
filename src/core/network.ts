@@ -173,20 +173,28 @@ async function setupWindowsFirewall(port: number): Promise<void> {
  */
 async function setupMacFirewall(port: number): Promise<void> {
   logger.info('Setting up Mac firewall rule...');
-  
+
   try {
-    console.log('Need sudo to add firewall rule. Don\'t worry, it\'s just for port', port);
-    
+    console.log('\nSudo access required to configure firewall for port', port);
+    console.log('Please enter your password when prompted:\n');
+
     const commands = getMacFirewallCommands();
     for (const args of commands) {
-      await execa('sudo', args);
+      // Use stdio: 'inherit' to allow sudo to interact with terminal directly
+      await execa('sudo', args, { stdio: 'inherit' });
     }
-    
+
     logger.info('Mac firewall rule added');
-    console.log('Firewall configured successfully');
+    console.log('\nFirewall configured successfully!\n');
   } catch (error) {
-    // If automation fails (likely due to SIP or no sudo), provide manual instructions
-    throw new Error(`Mac firewall configuration failed: ${error}`);
+    // If automation fails, provide manual instructions
+    logger.error('Mac firewall setup failed:', error);
+    console.log('\n⚠️  Automatic firewall setup failed.');
+    console.log('The server will work on your local network without this.');
+    console.log('For internet access, manually configure:');
+    console.log('1. System Preferences > Security & Privacy > Firewall');
+    console.log('2. Click "Firewall Options"');
+    console.log('3. Add Java to allowed applications\n');
   }
 }
 
@@ -195,19 +203,22 @@ async function setupMacFirewall(port: number): Promise<void> {
  */
 async function setupLinuxFirewall(port: number): Promise<void> {
   logger.info('Setting up Linux firewall rule...');
-  
+
   try {
-    // Try iptables
+    console.log('\nSudo access required to configure firewall for port', port);
+    console.log('Please enter your password when prompted:\n');
+
+    // Try iptables with inherited stdio for password prompt
     await execa('sudo', [
       'iptables',
       '-A', 'INPUT',
       '-p', 'tcp',
       '--dport', port.toString(),
       '-j', 'ACCEPT',
-    ]);
-    
+    ], { stdio: 'inherit' });
+
     logger.info('Linux firewall rule added');
-    console.log('Firewall rule added successfully');
+    console.log('\nFirewall rule added successfully!\n');
   } catch (error) {
     // Try ufw as fallback
     try {
@@ -215,10 +226,10 @@ async function setupLinuxFirewall(port: number): Promise<void> {
         'ufw',
         'allow',
         `${port}/tcp`,
-      ]);
-      
+      ], { stdio: 'inherit' });
+
       logger.info('Linux firewall rule added via ufw');
-      console.log('Firewall rule added successfully');
+      console.log('\nFirewall rule added successfully!\n');
     } catch {
       throw new Error(`Linux firewall configuration failed: ${error}`);
     }

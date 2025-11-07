@@ -18,47 +18,66 @@ export const AddressPanel: React.FC<AddressPanelProps> = ({ networkInfo }) => {
     : null;
   const publicColor = networkInfo.reachable ? theme.success : theme.warning;
 
+  // Determine which address to show prominently
+  const shareAddress = networkInfo.reachable && publicAddress ? publicAddress : lanAddress;
+  const shareType = networkInfo.reachable && publicAddress ? 'INTERNET' : 'LAN ONLY';
+  const shareColor = networkInfo.reachable && publicAddress ? theme.success : theme.warning;
+
   return (
     <Box flexDirection="column" borderStyle="single" paddingX={1}>
       <Text color={theme.accent} bold>Connection Info</Text>
-      
+
       <Box marginTop={1} flexDirection="column">
-        <Box>
-          <Text>LAN address: </Text>
-          <Text color={theme.success}>{lanAddress}</Text>
+        {/* Big prominent address box */}
+        <Box flexDirection="column" borderStyle="round" borderColor={shareColor} paddingX={1} marginBottom={1}>
+          <Text color={theme.muted} dimColor>SHARE THIS ADDRESS ({shareType}):</Text>
+          <Text color={shareColor} bold> {shareAddress} </Text>
         </Box>
 
-        {publicAddress && (
+        {/* Detailed breakdown */}
+        <Box flexDirection="column" marginTop={1}>
+          <Text color={theme.muted} dimColor>Details:</Text>
+
+          <Box marginTop={1}>
+            <Text dimColor>• LAN: </Text>
+            <Text color={theme.success}>{lanAddress}</Text>
+          </Box>
+
+          {publicAddress && (
+            <Box>
+              <Text dimColor>• Internet: </Text>
+              <Text color={publicColor}>{publicAddress}</Text>
+            </Box>
+          )}
+
           <Box>
-            <Text>Public address: </Text>
-            <Text color={publicColor}>
-              {publicAddress}
+            <Text dimColor>• Port: </Text>
+            <Text color={theme.accent}>{networkInfo.port}</Text>
+          </Box>
+
+          <Box>
+            <Text dimColor>• UPnP: </Text>
+            <Text color={networkInfo.upnpSuccess ? theme.success : theme.error}>
+              {networkInfo.upnpSuccess ? 'Enabled' : 'Disabled'}
             </Text>
           </Box>
-        )}
 
-        <Box marginTop={1}>
-          <Text>UPnP: </Text>
-          <Text color={networkInfo.upnpSuccess ? theme.success : theme.error}>
-            {networkInfo.upnpSuccess ? 'Mapped' : 'Failed'}
-          </Text>
-        </Box>
-
-        <Box marginTop={1}>
-          <Text>Reachability: </Text>
-          <Text color={publicColor}>
-            {networkInfo.reachable ? 'Publicly accessible' : 'LAN only'}
-          </Text>
+          <Box>
+            <Text dimColor>• Access: </Text>
+            <Text color={publicColor}>
+              {networkInfo.reachable ? 'Public ✓' : 'Local only'}
+            </Text>
+          </Box>
         </Box>
 
         {!networkInfo.reachable && (
           <Box marginTop={1} flexDirection="column">
-            <Text color={theme.warning} bold>Tips:</Text>
+            <Text color={theme.warning} bold>Need internet access?</Text>
             <Text color={theme.muted}>
-              • Enable UPnP, or forward TCP {networkInfo.port} to this machine.
+              • Forward port {networkInfo.port} in router
             </Text>
             <Text color={theme.muted}>
-              • Alternative: share over Tailscale / VPN.
+              • Or use Tailscale/VPN
             </Text>
           </Box>
         )}
