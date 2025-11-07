@@ -172,22 +172,18 @@ async function setupWindowsFirewall(port: number): Promise<void> {
  * Setup Mac firewall
  */
 async function setupMacFirewall(port: number): Promise<void> {
-  logger.info('Setting up Mac firewall rule...');
-  
-  try {
-    console.log('Need sudo to add firewall rule. Don\'t worry, it\'s just for port', port);
-    
-    const commands = getMacFirewallCommands();
-    for (const args of commands) {
-      await execa('sudo', args);
-    }
-    
-    logger.info('Mac firewall rule added');
-    console.log('Firewall configured successfully');
-  } catch (error) {
-    // If automation fails (likely due to SIP or no sudo), provide manual instructions
-    throw new Error(`Mac firewall configuration failed: ${error}`);
-  }
+  logger.info('Skipping automatic Mac firewall setup (requires manual configuration)');
+
+  // On macOS, automatic firewall setup requires sudo password which conflicts with TUI
+  // Skip automatic setup and show manual instructions instead
+  console.log('\nFirewall setup requires manual configuration.');
+  console.log('The server will work on your local network without this.');
+  console.log('For internet access, you may need to:');
+  console.log('1. Go to System Preferences > Security & Privacy > Firewall');
+  console.log('2. Click "Firewall Options"');
+  console.log('3. Add Java to allowed applications\n');
+
+  logger.info('Mac firewall instructions displayed');
 }
 
 /**
