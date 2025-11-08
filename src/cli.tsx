@@ -13,9 +13,11 @@ import { ensureJava } from './core/java.js';
 import { setupServer } from './core/serverJar.js';
 import { acceptEULA } from './core/eula.js';
 import { setupNetwork } from './core/network.js';
-import { startServer } from './core/run.js';
+import { startServer, stopServer } from './core/run.js';
+import { createBackup } from './core/backup.js';
 import { createReport } from './core/report.js';
 import { Banner } from './ui/components/Banner.js';
+import { logger } from './utils/log.js';
 import type { LazyConfig, SystemInfo, NetworkInfo } from './types/index.js';
 
 interface AppProps {
@@ -137,11 +139,34 @@ export const App: React.FC<AppProps> = ({ quickMode = false }) => {
   };
 
   const handleStop = async () => {
-    if (serverProcess) {
-      await serverProcess.kill();
-      setServerProcess(null);
+    try {
+      logger.info('User initiated shutdown from dashboard');
+
+      // Create backup if enabled
+      if (config && config.backupOnExit) {
+        console.log('\nCreating backup before shutdown...');
+        try {
+          await createBackup(config.worldPath);
+          console.log('✓ Backup completed');
+        } catch (backupError) {
+          logger.error('Backup failed during shutdown:', backupError);
+          console.log('⚠ Backup failed, continuing with shutdown');
+        }
+      }
+
+      // Stop server gracefully
+      if (serverProcess) {
+        await stopServer();
+        setServerProcess(null);
+      }
+
+      logger.info('Shutdown completed successfully');
+    } catch (error) {
+      logger.error('Error during shutdown:', error);
+      console.error('Error during shutdown:', error);
+    } finally {
+      exit();
     }
-    exit();
   };
 
   if (state === 'loading') {

@@ -12,6 +12,7 @@ import { App } from './cli.js';
 import { startAPI } from './core/api.js';
 import { getPaths } from './utils/paths.js';
 import { logger } from './utils/log.js';
+import { emergencyCleanup, emergencyCleanupSync } from './core/run.js';
 
 async function main() {
   try {
@@ -94,17 +95,116 @@ Backups are saved in the backups/ directory
   }
 }
 
-// Handle uncaught errors
-process.on('uncaughtException', (error) => {
+// ========================================
+// COMPREHENSIVE SHUTDOWN HANDLERS
+// ========================================
+// These handlers ensure the Minecraft server is ALWAYS shut down
+// when the launcher exits, preventing orphaned processes
+
+let isCleaningUp = false;
+
+/**
+ * Async cleanup handler for signals that allow async operations
+ */
+async function handleShutdown(signal: string) {
+  if (isCleaningUp) {
+    logger.info(`${signal} received but cleanup already in progress`);
+    return;
+  }
+
+  isCleaningUp = true;
+  logger.info(`${signal} received, shutting down gracefully...`);
+  console.log(`\n${signal} received, shutting down server...`);
+
+  try {
+    await emergencyCleanup();
+    logger.info('Graceful shutdown completed');
+    console.log('Server stopped successfully.');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during shutdown:', error);
+    console.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+}
+
+// Handle SIGINT (Ctrl+C)
+process.on('SIGINT', () => {
+  handleShutdown('SIGINT');
+});
+
+// Handle SIGTERM (kill command)
+process.on('SIGTERM', () => {
+  handleShutdown('SIGTERM');
+});
+
+// Handle SIGHUP (terminal closed)
+process.on('SIGHUP', () => {
+  handleShutdown('SIGHUP');
+});
+
+// Handle SIGQUIT (Ctrl+\)
+process.on('SIGQUIT', () => {
+  handleShutdown('SIGQUIT');
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', async (error) => {
   logger.error('Uncaught exception:', error);
   console.error('Uncaught exception:', error);
+
+  if (!isCleaningUp) {
+    isCleaningUp = true;
+    try {
+      await emergencyCleanup();
+    } catch (cleanupError) {
+      logger.error('Cleanup failed after uncaught exception:', cleanupError);
+    }
+  }
+
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+// Handle unhandled promise rejections
+process.on('unhandledRejection', async (reason, promise) => {
   logger.error('Unhandled rejection at:', promise, 'reason:', reason);
   console.error('Unhandled rejection:', reason);
+
+  if (!isCleaningUp) {
+    isCleaningUp = true;
+    try {
+      await emergencyCleanup();
+    } catch (cleanupError) {
+      logger.error('Cleanup failed after unhandled rejection:', cleanupError);
+    }
+  }
+
   process.exit(1);
+});
+
+// Handle process exit - this ALWAYS fires, even on crashes
+// MUST be synchronous as async operations are not allowed here
+process.on('exit', (code) => {
+  logger.info(`Process exiting with code ${code}`);
+
+  // Synchronous cleanup only - no async allowed in 'exit' handler
+  if (!isCleaningUp) {
+    emergencyCleanupSync();
+  }
+});
+
+// Handle beforeExit - fires when event loop empties
+// This allows async cleanup before the process actually exits
+process.on('beforeExit', async (code) => {
+  if (!isCleaningUp && code === 0) {
+    logger.info('Process finishing, checking for cleanup...');
+    isCleaningUp = true;
+    try {
+      await emergencyCleanup();
+    } catch (error) {
+      logger.error('Cleanup failed in beforeExit:', error);
+    }
+  }
 });
 
 // Start the application
