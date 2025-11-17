@@ -1,6 +1,6 @@
 /**
- * Setup Wizard for LazyCraft Launcher
- * Handles the multi-step configuration process
+ * Setup Wizard for LazyCraft Launcher - Tailwind Enhanced
+ * Handles the multi-step configuration process with smooth animations
  */
 
 const Wizard = {
@@ -13,18 +13,21 @@ const Wizard = {
             id: 'serverType',
             title: 'Choose Server Type',
             render: () => `
-                <p class="mb-10">What type of server do you want to run?</p>
-                <div class="option-grid">
+                <p class="text-gray-300 mb-8 text-lg pixel-text-small">What type of server do you want to run?</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="option-card" data-value="vanilla">
-                        <h4>⛏️ Vanilla</h4>
+                        <div class="text-4xl mb-4">⛏️</div>
+                        <h4>Vanilla</h4>
                         <p>Pure Minecraft experience</p>
                     </div>
                     <div class="option-card" data-value="forge">
-                        <h4>🔧 Forge</h4>
+                        <div class="text-4xl mb-4">🔧</div>
+                        <h4>Forge</h4>
                         <p>Mods and customization</p>
                     </div>
                     <div class="option-card" data-value="paper">
-                        <h4>📜 Paper</h4>
+                        <div class="text-4xl mb-4">📜</div>
+                        <h4>Paper</h4>
                         <p>Performance optimized</p>
                     </div>
                 </div>
@@ -35,11 +38,19 @@ const Wizard = {
             id: 'version',
             title: 'Minecraft Version',
             render: () => `
-                <div class="form-group">
-                    <label>What version do you want to run?</label>
-                    <input type="text" id="version-input" placeholder="latest" value="latest">
-                    <p class="text-secondary mt-10" style="font-size: 7px;">
-                        Examples: "latest", "1.21.3", "1.20.1"
+                <div class="space-y-4">
+                    <label class="block text-gray-300 text-sm pixel-text-small">
+                        What version do you want to run?
+                    </label>
+                    <input
+                        type="text"
+                        id="version-input"
+                        class="w-full bg-mc-coal/50 px-4 py-3 rounded-xl text-white font-mono border-2 border-mc-stone/50 focus:border-mc-grass focus:outline-none transition-colors"
+                        placeholder="latest"
+                        value="latest"
+                    />
+                    <p class="text-gray-500 text-sm pixel-text-small">
+                        💡 Examples: "latest", "1.21.3", "1.20.1"
                     </p>
                 </div>
             `,
@@ -53,22 +64,29 @@ const Wizard = {
             id: 'world',
             title: 'World Setup',
             render: () => `
-                <p class="mb-10">Do you want to create a new world or use an existing one?</p>
-                <div class="option-grid">
+                <p class="text-gray-300 mb-8 text-lg pixel-text-small">Do you want to create a new world or use an existing one?</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div class="option-card" data-value="new">
-                        <h4>🌍 New World</h4>
+                        <div class="text-4xl mb-4">🌍</div>
+                        <h4>New World</h4>
                         <p>Generate a fresh world</p>
                     </div>
                     <div class="option-card" data-value="existing">
-                        <h4>📁 Existing World</h4>
+                        <div class="text-4xl mb-4">📁</div>
+                        <h4>Existing World</h4>
                         <p>Use a world folder</p>
                     </div>
                 </div>
-                <div id="world-path-container" class="hidden mt-10">
-                    <div class="form-group">
-                        <label>World folder path:</label>
-                        <input type="text" id="world-path-input" placeholder="./world">
-                    </div>
+                <div id="world-path-container" class="hidden space-y-4 animate-slide-up">
+                    <label class="block text-gray-300 text-sm pixel-text-small">
+                        World folder path:
+                    </label>
+                    <input
+                        type="text"
+                        id="world-path-input"
+                        class="w-full bg-mc-coal/50 px-4 py-3 rounded-xl text-white font-mono border-2 border-mc-stone/50 focus:border-mc-grass focus:outline-none transition-colors"
+                        placeholder="./world"
+                    />
                 </div>
             `,
             validate: () => {
@@ -88,12 +106,24 @@ const Wizard = {
             render: () => {
                 const maxRam = Wizard.systemInfo ? Math.floor(Wizard.systemInfo.totalRAMGB * 0.8) : 4;
                 return `
-                    <div class="form-group">
-                        <label>How much RAM to allocate? (GB)</label>
-                        <input type="number" id="ram-input" min="1" max="${maxRam}" value="4">
-                        <p class="text-secondary mt-10" style="font-size: 7px;">
-                            System RAM: ${Wizard.systemInfo?.totalRAMGB || '?'}GB | Recommended max: ${maxRam}GB
-                        </p>
+                    <div class="space-y-4">
+                        <label class="block text-gray-300 text-sm pixel-text-small">
+                            How much RAM to allocate? (GB)
+                        </label>
+                        <input
+                            type="number"
+                            id="ram-input"
+                            class="w-full bg-mc-coal/50 px-4 py-3 rounded-xl text-white font-mono text-2xl text-center border-2 border-mc-stone/50 focus:border-mc-grass focus:outline-none transition-colors"
+                            min="1"
+                            max="${maxRam}"
+                            value="4"
+                        />
+                        <div class="bg-mc-coal/30 px-4 py-3 rounded-lg border border-mc-stone/30">
+                            <p class="text-gray-400 text-sm pixel-text-small">
+                                💻 System RAM: <span class="text-mc-diamond">${Wizard.systemInfo?.totalRAMGB || '?'}GB</span> |
+                                Recommended max: <span class="text-mc-grass">${maxRam}GB</span>
+                            </p>
+                        </div>
                     </div>
                 `;
             },
@@ -112,12 +142,23 @@ const Wizard = {
             id: 'port',
             title: 'Server Port',
             render: () => `
-                <div class="form-group">
-                    <label>What port should the server run on?</label>
-                    <input type="number" id="port-input" min="1024" max="65535" value="25565">
-                    <p class="text-secondary mt-10" style="font-size: 7px;">
-                        Default Minecraft port is 25565
-                    </p>
+                <div class="space-y-4">
+                    <label class="block text-gray-300 text-sm pixel-text-small">
+                        What port should the server run on?
+                    </label>
+                    <input
+                        type="number"
+                        id="port-input"
+                        class="w-full bg-mc-coal/50 px-4 py-3 rounded-xl text-white font-mono text-2xl text-center border-2 border-mc-stone/50 focus:border-mc-grass focus:outline-none transition-colors"
+                        min="1024"
+                        max="65535"
+                        value="25565"
+                    />
+                    <div class="bg-mc-coal/30 px-4 py-3 rounded-lg border border-mc-stone/30">
+                        <p class="text-gray-400 text-sm pixel-text-small">
+                            💡 Default Minecraft port is <span class="text-mc-diamond">25565</span>
+                        </p>
+                    </div>
                 </div>
             `,
             validate: () => {
@@ -135,18 +176,21 @@ const Wizard = {
             id: 'profile',
             title: 'Game Profile',
             render: () => `
-                <p class="mb-10">Choose a game profile preset:</p>
-                <div class="option-grid">
+                <p class="text-gray-300 mb-8 text-lg pixel-text-small">Choose a game profile preset:</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="option-card" data-value="survival-default">
-                        <h4>⚔️ Survival</h4>
+                        <div class="text-4xl mb-4">⚔️</div>
+                        <h4>Survival</h4>
                         <p>Default survival mode</p>
                     </div>
                     <div class="option-card" data-value="creative-flat">
-                        <h4>🎨 Creative</h4>
+                        <div class="text-4xl mb-4">🎨</div>
+                        <h4>Creative</h4>
                         <p>Flat world, creative mode</p>
                     </div>
                     <div class="option-card" data-value="hardcore-minimal">
-                        <h4>💀 Hardcore</h4>
+                        <div class="text-4xl mb-4">💀</div>
+                        <h4>Hardcore</h4>
                         <p>One life, hard difficulty</p>
                     </div>
                 </div>
@@ -157,17 +201,33 @@ const Wizard = {
             id: 'advanced',
             title: 'Advanced Options',
             render: () => `
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="upnp-checkbox" checked>
-                        Enable UPnP (automatic port forwarding)
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="backup-checkbox" checked>
-                        Backup world on server stop
-                    </label>
+                <div class="space-y-6">
+                    <div class="bg-mc-coal/30 p-6 rounded-xl border-2 border-mc-stone/30 hover:border-mc-grass/50 transition-colors">
+                        <label class="flex items-center gap-4 cursor-pointer group">
+                            <input type="checkbox" id="upnp-checkbox" checked class="transform scale-150">
+                            <div>
+                                <div class="text-mc-grass font-bold pixel-text-small text-lg group-hover:text-mc-emerald transition-colors">
+                                    Enable UPnP
+                                </div>
+                                <div class="text-gray-400 text-sm pixel-text-small mt-1">
+                                    Automatic port forwarding (recommended)
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="bg-mc-coal/30 p-6 rounded-xl border-2 border-mc-stone/30 hover:border-mc-diamond/50 transition-colors">
+                        <label class="flex items-center gap-4 cursor-pointer group">
+                            <input type="checkbox" id="backup-checkbox" checked class="transform scale-150">
+                            <div>
+                                <div class="text-mc-diamond font-bold pixel-text-small text-lg group-hover:text-mc-grass transition-colors">
+                                    Backup on Exit
+                                </div>
+                                <div class="text-gray-400 text-sm pixel-text-small mt-1">
+                                    Automatically backup world when stopping server
+                                </div>
+                            </div>
+                        </label>
+                    </div>
                 </div>
             `,
             validate: () => {
@@ -178,47 +238,57 @@ const Wizard = {
         },
         {
             id: 'confirm',
-            title: 'Confirm Setup',
+            title: 'Ready to Launch!',
             render: () => {
                 return `
-                    <div class="status-content">
-                        <h3 style="margin-bottom: 15px;">Review Your Configuration:</h3>
-                        <div class="status-row">
-                            <span class="label">Server Type:</span>
-                            <span>${Wizard.answers.serverType || 'N/A'}</span>
+                    <div class="space-y-6">
+                        <div class="bg-gradient-to-br from-mc-grass/20 to-mc-emerald/20 p-6 rounded-2xl border-2 border-mc-grass/50">
+                            <h3 class="text-xl font-bold text-mc-gold mb-4 pixel-text">📋 Configuration Summary</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-mc-coal/50 p-4 rounded-lg">
+                                    <div class="text-gray-400 text-xs pixel-text-small mb-1">Server Type</div>
+                                    <div class="text-mc-grass font-bold text-lg pixel-text-small">${Wizard.answers.serverType || 'N/A'}</div>
+                                </div>
+                                <div class="bg-mc-coal/50 p-4 rounded-lg">
+                                    <div class="text-gray-400 text-xs pixel-text-small mb-1">Version</div>
+                                    <div class="text-mc-diamond font-bold text-lg pixel-text-small">${Wizard.answers.minecraftVersion || 'N/A'}</div>
+                                </div>
+                                <div class="bg-mc-coal/50 p-4 rounded-lg">
+                                    <div class="text-gray-400 text-xs pixel-text-small mb-1">World</div>
+                                    <div class="text-mc-grass font-bold text-lg pixel-text-small">${Wizard.answers.worldChoice === 'new' ? 'New World' : 'Existing'}</div>
+                                </div>
+                                <div class="bg-mc-coal/50 p-4 rounded-lg">
+                                    <div class="text-gray-400 text-xs pixel-text-small mb-1">RAM</div>
+                                    <div class="text-mc-diamond font-bold text-lg pixel-text-small">${Wizard.answers.ramGB || 'N/A'}GB</div>
+                                </div>
+                                <div class="bg-mc-coal/50 p-4 rounded-lg">
+                                    <div class="text-gray-400 text-xs pixel-text-small mb-1">Port</div>
+                                    <div class="text-mc-grass font-bold text-lg pixel-text-small">${Wizard.answers.port || 'N/A'}</div>
+                                </div>
+                                <div class="bg-mc-coal/50 p-4 rounded-lg">
+                                    <div class="text-gray-400 text-xs pixel-text-small mb-1">Profile</div>
+                                    <div class="text-mc-diamond font-bold text-lg pixel-text-small">${Wizard.answers.profile || 'N/A'}</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 mt-4">
+                                <div class="flex-1 bg-mc-coal/50 p-3 rounded-lg text-center">
+                                    <div class="text-sm pixel-text-small ${Wizard.answers.upnpEnabled ? 'text-mc-emerald' : 'text-gray-500'}">
+                                        ${Wizard.answers.upnpEnabled ? '✓' : '✗'} UPnP
+                                    </div>
+                                </div>
+                                <div class="flex-1 bg-mc-coal/50 p-3 rounded-lg text-center">
+                                    <div class="text-sm pixel-text-small ${Wizard.answers.backupOnExit ? 'text-mc-emerald' : 'text-gray-500'}">
+                                        ${Wizard.answers.backupOnExit ? '✓' : '✗'} Auto Backup
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="status-row">
-                            <span class="label">Version:</span>
-                            <span>${Wizard.answers.minecraftVersion || 'N/A'}</span>
-                        </div>
-                        <div class="status-row">
-                            <span class="label">World:</span>
-                            <span>${Wizard.answers.worldChoice === 'new' ? 'New World' : Wizard.answers.worldPath}</span>
-                        </div>
-                        <div class="status-row">
-                            <span class="label">RAM:</span>
-                            <span>${Wizard.answers.ramGB || 'N/A'}GB</span>
-                        </div>
-                        <div class="status-row">
-                            <span class="label">Port:</span>
-                            <span>${Wizard.answers.port || 'N/A'}</span>
-                        </div>
-                        <div class="status-row">
-                            <span class="label">Profile:</span>
-                            <span>${Wizard.answers.profile || 'N/A'}</span>
-                        </div>
-                        <div class="status-row">
-                            <span class="label">UPnP:</span>
-                            <span>${Wizard.answers.upnpEnabled ? '✓ Enabled' : '✗ Disabled'}</span>
-                        </div>
-                        <div class="status-row">
-                            <span class="label">Auto Backup:</span>
-                            <span>${Wizard.answers.backupOnExit ? '✓ Enabled' : '✗ Disabled'}</span>
+                        <div class="text-center">
+                            <p class="text-2xl text-mc-gold pixel-text animate-pulse">
+                                🚀 Ready to launch your server!
+                            </p>
                         </div>
                     </div>
-                    <p class="mt-10 text-center" style="color: var(--gold-yellow);">
-                        Ready to launch your server?
-                    </p>
                 `;
             },
             validate: () => true
@@ -241,19 +311,36 @@ const Wizard = {
         const nextBtn = document.getElementById('wizard-next');
         const progress = document.getElementById('wizard-progress');
 
+        // Update title
         title.textContent = step.title;
-        content.innerHTML = step.render();
+
+        // Render content with fade animation
+        content.style.opacity = '0';
+        setTimeout(() => {
+            content.innerHTML = step.render();
+            content.style.transition = 'opacity 0.3s ease';
+            content.style.opacity = '1';
+            this.attachStepListeners();
+        }, 150);
 
         // Update buttons
-        backBtn.style.display = this.currentStep > 0 ? 'inline-block' : 'none';
-        nextBtn.textContent = this.currentStep === this.steps.length - 1 ? 'Launch Server! 🚀' : 'Next →';
+        if (this.currentStep > 0) {
+            backBtn.classList.remove('hidden');
+        } else {
+            backBtn.classList.add('hidden');
+        }
+
+        if (this.currentStep === this.steps.length - 1) {
+            nextBtn.innerHTML = 'Launch Server! 🚀';
+            nextBtn.classList.add('animate-pulse');
+        } else {
+            nextBtn.innerHTML = 'Next →';
+            nextBtn.classList.remove('animate-pulse');
+        }
 
         // Update progress bar
         const progressPercent = ((this.currentStep + 1) / this.steps.length) * 100;
         progress.style.width = `${progressPercent}%`;
-
-        // Re-attach listeners for dynamic content
-        this.attachStepListeners();
     },
 
     attachEventListeners() {
