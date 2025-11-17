@@ -56,16 +56,42 @@ export async function downloadFile(
   });
 
   downloadStream.on('downloadProgress', progress => {
-    if (onProgress) {
+    if (onProgress && progress.percent !== undefined) {
       onProgress(progress.percent);
     }
   });
 
   await new Promise<void>((resolve, reject) => {
     const fileStream = fs.createWriteStream(tempPath);
-    fileStream.on('finish', resolve);
-    fileStream.on('error', reject);
-    downloadStream.on('error', reject);
+
+    // Add overall timeout protection
+    const overallTimeout = setTimeout(() => {
+      downloadStream.destroy();
+      fileStream.destroy();
+      reject(new Error(`Download timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    const cleanup = () => {
+      clearTimeout(overallTimeout);
+    };
+
+    fileStream.on('finish', () => {
+      cleanup();
+      resolve();
+    });
+
+    fileStream.on('error', (error) => {
+      cleanup();
+      downloadStream.destroy();
+      reject(error);
+    });
+
+    downloadStream.on('error', (error) => {
+      cleanup();
+      fileStream.destroy();
+      reject(error);
+    });
+
     downloadStream.pipe(fileStream);
   });
 

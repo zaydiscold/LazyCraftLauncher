@@ -114,14 +114,10 @@ let isCleaningUp = false;
 
 /**
  * Async cleanup handler for signals that allow async operations
+ * NOTE: The isCleaningUp flag must be set BEFORE calling this function
+ * to prevent race conditions with multiple signals
  */
-async function handleShutdown(signal: string) {
-  if (isCleaningUp) {
-    logger.info(`${signal} received but cleanup already in progress`);
-    return;
-  }
-
-  isCleaningUp = true;
+async function handleShutdown(signal: string): Promise<void> {
   logger.info(`${signal} received, shutting down gracefully...`);
   console.log(`\n${signal} received, shutting down server...`);
 
@@ -137,24 +133,44 @@ async function handleShutdown(signal: string) {
   }
 }
 
+/**
+ * Synchronous signal handler wrapper
+ * Sets the cleanup flag BEFORE calling async handler to prevent race conditions
+ */
+function handleSignal(signal: string): void {
+  if (isCleaningUp) {
+    logger.info(`${signal} received but cleanup already in progress`);
+    return;
+  }
+
+  // Set flag synchronously to prevent race conditions
+  isCleaningUp = true;
+
+  // Call async cleanup (non-blocking)
+  handleShutdown(signal).catch((error) => {
+    logger.error(`Fatal error in shutdown handler for ${signal}:`, error);
+    process.exit(1);
+  });
+}
+
 // Handle SIGINT (Ctrl+C)
 process.on('SIGINT', () => {
-  handleShutdown('SIGINT');
+  handleSignal('SIGINT');
 });
 
 // Handle SIGTERM (kill command)
 process.on('SIGTERM', () => {
-  handleShutdown('SIGTERM');
+  handleSignal('SIGTERM');
 });
 
 // Handle SIGHUP (terminal closed)
 process.on('SIGHUP', () => {
-  handleShutdown('SIGHUP');
+  handleSignal('SIGHUP');
 });
 
 // Handle SIGQUIT (Ctrl+\)
 process.on('SIGQUIT', () => {
-  handleShutdown('SIGQUIT');
+  handleSignal('SIGQUIT');
 });
 
 // Handle uncaught exceptions

@@ -6,32 +6,46 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { getPaths } from './paths.js';
+import { formatISODate } from './date.js';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 class Logger {
   private logFile: string | null = null;
   private stream: fs.WriteStream | null = null;
+  private initialized: boolean = false;
 
-  constructor() {
-    this.initLogFile();
-  }
+  /**
+   * Initialize the log file synchronously (lazy initialization)
+   * Called automatically on first log write
+   */
+  private initLogFile(): void {
+    if (this.initialized) {
+      return;
+    }
 
-  private async initLogFile() {
     try {
       const paths = getPaths();
-      await fs.ensureDir(paths.logs);
 
-      const timestamp = new Date().toISOString().split('T')[0];
+      // Synchronous directory creation (safe for constructor/early init)
+      fs.ensureDirSync(paths.logs);
+
+      const timestamp = formatISODate(new Date());
       this.logFile = path.join(paths.logs, `launcher-${timestamp}.log`);
 
       this.stream = fs.createWriteStream(this.logFile, { flags: 'a' });
+      this.initialized = true;
     } catch (error) {
       console.error('Failed to initialize log file:', error);
+      // Graceful fallback - logging will continue to console only
     }
   }
 
-  private log(level: LogLevel, message: string, ...args: any[]) {
+  private log(level: LogLevel, message: string, ...args: any[]): void {
+    // Lazy initialization on first log write
+    if (!this.initialized) {
+      this.initLogFile();
+    }
     const timestamp = new Date().toISOString();
     const formatted = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
 
@@ -61,23 +75,23 @@ class Logger {
     }
   }
 
-  debug(message: string, ...args: any[]) {
+  debug(message: string, ...args: any[]): void {
     this.log('debug', message, ...args);
   }
 
-  info(message: string, ...args: any[]) {
+  info(message: string, ...args: any[]): void {
     this.log('info', message, ...args);
   }
 
-  warn(message: string, ...args: any[]) {
+  warn(message: string, ...args: any[]): void {
     this.log('warn', message, ...args);
   }
 
-  error(message: string, ...args: any[]) {
+  error(message: string, ...args: any[]): void {
     this.log('error', message, ...args);
   }
 
-  close() {
+  close(): void {
     if (this.stream) {
       this.stream.end();
       this.stream = null;

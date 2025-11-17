@@ -9,14 +9,16 @@ import fs from 'fs-extra';
 import { execa } from 'execa';
 import { getPaths } from '../utils/paths.js';
 import { logger } from '../utils/log.js';
-import { testPortReachability } from './network.js';
+import { formatLogDate } from '../utils/date.js';
+import { TIMEOUTS, FILES } from '../utils/constants.js';
+import { testPortReachability, loadNetworkInfo } from './network.js';
 import type { LazyConfig } from '../types/index.js';
 
 let serverProcess: ChildProcess | null = null;
 let serverStartTime: Date | null = null;
 let isShuttingDown: boolean = false;
 
-const PID_FILE = '.server.pid';
+const PID_FILE = FILES.PID_FILE;
 
 /**
  * Write PID file for process tracking
@@ -90,14 +92,14 @@ async function killProcess(pid: number, force: boolean = false): Promise<boolean
     process.kill(pid, force ? 'SIGKILL' : 'SIGTERM');
 
     // Wait a bit to see if it dies
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.PROCESS_KILL_CHECK));
 
     if (isProcessRunning(pid)) {
       if (!force) {
         // Try force kill
         logger.warn(`Process ${pid} didn't respond to SIGTERM, force killing`);
         process.kill(pid, 'SIGKILL');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.FORCE_KILL_RETRY));
       }
     }
 
@@ -185,7 +187,7 @@ export async function startServer(config: LazyConfig): Promise<ChildProcess> {
   }
   
   // Setup log file
-  const logFile = path.join(paths.logs, `server-${formatDate(serverStartTime)}.log`);
+  const logFile = path.join(paths.logs, `server-${formatLogDate(serverStartTime)}.log`);
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
   
   // Handle stdout
@@ -292,7 +294,7 @@ export async function stopServer(): Promise<void> {
       serverProcess.once('exit', cleanup);
 
       timeout = setTimeout(() => {
-        // Force kill if not stopped after 30 seconds
+        // Force kill if not stopped after graceful shutdown timeout
         if (serverProcess && !serverProcess.killed) {
           logger.warn('Force killing server process after timeout');
           try {
@@ -302,7 +304,7 @@ export async function stopServer(): Promise<void> {
           }
         }
         cleanup();
-      }, 30000);
+      }, TIMEOUTS.GRACEFUL_SHUTDOWN);
     } else {
       cleanup();
     }
@@ -318,7 +320,7 @@ export async function restartServer(config: LazyConfig): Promise<ChildProcess> {
   if (serverProcess) {
     await stopServer();
     // Wait a bit for ports to be released
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.SERVER_RESTART_DELAY));
   }
   
   return startServer(config);
@@ -371,10 +373,9 @@ export function getServerProcess(): ChildProcess | null {
 async function onServerReady(config: LazyConfig): Promise<void> {
   logger.info('Server is ready!');
   
-  // Test port reachability after a short delay
+  // Test port reachability after server is ready
   setTimeout(async () => {
-    const paths = getPaths();
-    const networkInfo = await loadNetworkInfo(paths.root);
+    const networkInfo = await loadNetworkInfo();
     
     if (networkInfo && networkInfo.publicIP) {
       const reachable = await testPortReachability(networkInfo.publicIP, config.port);
@@ -382,6 +383,7 @@ async function onServerReady(config: LazyConfig): Promise<void> {
       networkInfo.reachable = reachable;
       networkInfo.lastChecked = new Date().toISOString();
       try {
+        const paths = getPaths();
         await fs.writeJson(path.join(paths.root, '.network-info.json'), networkInfo, { spaces: 2 });
       } catch (error) {
         logger.warn('Failed to persist reachability status:', error);
@@ -395,32 +397,7 @@ async function onServerReady(config: LazyConfig): Promise<void> {
         console.log(`LAN address: ${networkInfo.lanIP}:${config.port}`);
       }
     }
-  }, 5000);
-}
-
-/**
- * Load network info from file
- */
-async function loadNetworkInfo(serverDir: string): Promise<any> {
-  try {
-    const infoPath = path.join(serverDir, '.network-info.json');
-    if (await fs.pathExists(infoPath)) {
-      return await fs.readJson(infoPath);
-    }
-  } catch (error) {
-    logger.error('Error loading network info:', error);
-  }
-  return null;
-}
-
-/**
- * Format date for log filename
- */
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
+  }, TIMEOUTS.SERVER_READY_CHECK);
 }
 
 /**
