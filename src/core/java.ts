@@ -201,17 +201,36 @@ async function downloadFile(url: string, destination: string): Promise<void> {
   const fileStream = fs.createWriteStream(destination);
 
   return new Promise((resolve, reject) => {
+    // Add timeout protection (5 minutes for large downloads)
+    const timeout = setTimeout(() => {
+      downloadStream.destroy();
+      fileStream.destroy();
+      reject(new Error('Download timed out after 5 minutes'));
+    }, 300000);
+
     downloadStream.on('downloadProgress', (progress) => {
       const percent = Math.round(progress.percent * 100);
       process.stdout.write(`\rDownloading Java: ${percent}%`);
     });
 
-    downloadStream.on('error', reject);
+    downloadStream.on('error', (error) => {
+      clearTimeout(timeout);
+      fileStream.destroy();
+      reject(error);
+    });
+
     fileStream.on('finish', () => {
+      clearTimeout(timeout);
       console.log('\nDownload complete!');
       resolve(undefined);
     });
-    fileStream.on('error', reject);
+
+    fileStream.on('error', (error) => {
+      clearTimeout(timeout);
+      downloadStream.destroy();
+      reject(error);
+    });
+
     downloadStream.pipe(fileStream);
   });
 }

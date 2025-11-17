@@ -26,7 +26,7 @@ export async function getServerStatus(
 
   const uptime = getUptime();
   const { players, lastLine } = await extractPlayerState();
-  const maxPlayers = await readMaxPlayers(config);
+  const maxPlayers = await readMaxPlayers();
 
   return {
     running,
@@ -79,7 +79,7 @@ async function extractPlayerState(): Promise<{ players: string[]; lastLine: stri
   }
 }
 
-async function readMaxPlayers(config: LazyConfig): Promise<number> {
+async function readMaxPlayers(): Promise<number> {
   try {
     const paths = getPaths();
     const propertiesPath = path.join(paths.root, 'server.properties');

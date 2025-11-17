@@ -3,7 +3,6 @@
  * Handles UPnP, firewall, port testing
  */
 
-import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 import got from 'got';
@@ -13,6 +12,8 @@ import { execa } from 'execa';
 import { logger } from '../utils/log.js';
 import { getLocalIP } from './detect.js';
 import { getPaths } from '../utils/paths.js';
+import { withTimeout } from '../utils/retry.js';
+import { TIMEOUTS, REGEX } from '../utils/constants.js';
 import {
   getWindowsFirewallAddArgs,
   getWindowsFirewallRemoveArgs,
@@ -77,18 +78,29 @@ async function getPublicIP(): Promise<string | undefined> {
   for (const service of services) {
     try {
       logger.debug(`Trying to get public IP from ${service}`);
-      const response = await got(service, {
-        timeout: { request: 5000 },
-        retry: { limit: 0 },
-      });
+
+      // Wrap the request with a timeout to prevent hanging
+      const response = await withTimeout(
+        got(service, {
+          timeout: { request: TIMEOUTS.PUBLIC_IP_TIMEOUT },
+          retry: { limit: 0 },
+        }),
+        TIMEOUTS.PUBLIC_IP_TIMEOUT,
+        `Public IP request to ${service} timed out`
+      );
+
       const ip = response.body.trim();
-      // Validate IP format (basic IPv4 check)
-      if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+
+      // Validate IP format using regex from constants
+      if (REGEX.IPV4.test(ip)) {
         logger.info(`Public IP detected: ${ip}`);
         return ip;
+      } else {
+        logger.warn(`Invalid IP format from ${service}: ${ip}`);
       }
     } catch (error) {
-      logger.debug(`Failed to get public IP from ${service}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.debug(`Failed to get public IP from ${service}: ${errorMessage}`);
       continue;
     }
   }

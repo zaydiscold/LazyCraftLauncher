@@ -13,7 +13,7 @@ import { detectSystem } from './detect.js';
 import { loadNetworkInfo } from './network.js';
 import { logger } from '../utils/log.js';
 import { LIMITS } from '../utils/constants.js';
-import type { APIResponse, ActionResult, ServerStatus, NetworkInfo, LazyConfig, SystemInfo } from '../types/index.js';
+import type { APIResponse, ActionResult, ServerStatus, LazyConfig, SystemInfo } from '../types/index.js';
 import { getPaths } from '../utils/paths.js';
 import fs from 'fs-extra';
 import path from 'path';

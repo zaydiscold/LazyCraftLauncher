@@ -10,9 +10,14 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "strict": false,
-    "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true,
-    "noEmitOnError": false
+    "noEmitOnError": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "removeComments": false,
+    "sourceMap": false
   },
   "include": ["src"],
   "exclude": ["dist", "node_modules"]
