@@ -226,7 +226,7 @@ async function setupFirewall(
   } catch (error) {
     logger.error('Firewall setup failed:', error);
     console.log('Could not automatically configure firewall.');
-    showFirewallInstructions(port, osType);
+    showFirewallInstructions(port, osType, javaPath);
   }
 }
 
@@ -263,6 +263,7 @@ async function setupMacFirewall(port: number, javaPath?: string): Promise<void> 
 
   try {
     // Determine the correct Java binary path
+    // Fall back to system Java if not provided
     const javaBinary = javaPath || '/usr/bin/java';
     logger.info(`Using Java binary: ${javaBinary}`);
 
@@ -281,6 +282,7 @@ async function setupMacFirewall(port: number, javaPath?: string): Promise<void> 
     console.log('\n🔐 Sudo access required to configure firewall for port', port);
     console.log('Please enter your password when prompted:\n');
 
+    // Get commands for the specific Java path
     const commands = getMacFirewallCommands(javaBinary);
     for (const args of commands) {
       // Use stdio: 'inherit' to allow sudo to interact with terminal directly
@@ -294,14 +296,11 @@ async function setupMacFirewall(port: number, javaPath?: string): Promise<void> 
     logger.error('Mac firewall setup failed:', error);
     console.log('\n⚠️  Automatic firewall setup failed.');
     console.log('The server will work on your local network without this.');
-    console.log('For internet access from outside your network, manually configure:');
-    console.log('1. System Settings > Network > Firewall');
-    console.log('2. Click "Options" and unlock with your password');
-    console.log('3. Add Java to allowed applications');
-    if (javaPath) {
-      console.log(`4. Java location: ${javaPath}`);
-    }
-    console.log('');
+    console.log('For internet access from outside your network, follow these steps:\n');
+
+    // Show detailed manual instructions with the actual Java path
+    const manualSteps = getMacFirewallManualSteps(javaPath);
+    manualSteps.forEach(step => console.log(step));
   }
 }
 
@@ -346,27 +345,37 @@ async function setupLinuxFirewall(port: number): Promise<void> {
 /**
  * Show manual firewall instructions
  */
-function showFirewallInstructions(port: number, osType: string): void {
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('MANUAL FIREWALL CONFIGURATION NEEDED');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-  
+function showFirewallInstructions(port: number, osType: string, javaPath?: string): void {
+  console.log('\n');
+
   switch (osType) {
     case 'windows':
       getWindowsFirewallManualSteps(port).forEach(step => console.log(step));
       break;
     case 'mac':
-      getMacFirewallManualSteps().forEach(step => console.log(step));
+      getMacFirewallManualSteps(javaPath).forEach(step => console.log(step));
       break;
     case 'linux':
-      console.log('Run one of these commands:');
-      console.log(`sudo iptables -A INPUT -p tcp --dport ${port} -j ACCEPT`);
-      console.log('OR');
-      console.log(`sudo ufw allow ${port}/tcp`);
+      console.log('╔═══════════════════════════════════════════════════════════╗');
+      console.log('║     MANUAL LINUX FIREWALL CONFIGURATION                   ║');
+      console.log('╚═══════════════════════════════════════════════════════════╝');
+      console.log('');
+      console.log('Run one of these commands to allow incoming connections:');
+      console.log('');
+      console.log('Option 1 - Using iptables:');
+      console.log(`  sudo iptables -A INPUT -p tcp --dport ${port} -j ACCEPT`);
+      console.log('');
+      console.log('Option 2 - Using ufw (Ubuntu/Debian):');
+      console.log(`  sudo ufw allow ${port}/tcp`);
+      console.log('');
+      console.log('Option 3 - Using firewalld (RHEL/CentOS/Fedora):');
+      console.log(`  sudo firewall-cmd --permanent --add-port=${port}/tcp`);
+      console.log('  sudo firewall-cmd --reload');
+      console.log('');
       break;
   }
-  
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+  console.log('');
 }
 
 /**
