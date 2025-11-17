@@ -441,7 +441,7 @@ export async function killAllJavaProcesses(): Promise<void> {
 
 /**
  * Emergency cleanup function - can be called from signal handlers
- * This function ensures the server is stopped even if the TUI crashes
+ * This function ensures the server is stopped even if the application crashes
  */
 export async function emergencyCleanup(): Promise<void> {
   logger.info('Emergency cleanup triggered');
