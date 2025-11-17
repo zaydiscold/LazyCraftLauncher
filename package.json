@@ -21,20 +21,14 @@
     "fastify": "^4.26.2",
     "fs-extra": "^11.2.0",
     "got": "^13.0.0",
-    "gradient-string": "^2.0.2",
     "handlebars": "^4.7.8",
-    "ink": "^4.4.1",
-    "ink-select-input": "^5.0.0",
-    "ink-text-input": "^5.0.1",
     "nat-api": "^0.3.1",
     "open": "^11.0.0",
-    "react": "^18.3.1",
     "yaml": "^2.4.2"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.11.17",
-    "@types/react": "^18.2.48",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.4"
@@ -43,6 +37,7 @@
     "dist",
     "templates",
     "assets",
+    "web",
     "LazyCraftLauncher-Complete-Spec.md",
     "README.md"
   ],
