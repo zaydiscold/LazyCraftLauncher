@@ -4,11 +4,8 @@
  * "You ask to play, we host for you."
  */
 
-import { render } from 'ink';
-import React from 'react';
 import fs from 'fs-extra';
-import path from 'path';
-import { App } from './cli.js';
+import open from 'open';
 import { startAPI } from './core/api.js';
 import { getPaths } from './utils/paths.js';
 import { logger } from './utils/log.js';
@@ -25,7 +22,6 @@ async function main() {
 
     // Check for command line arguments
     const args = process.argv.slice(2);
-    const isQuickMode = args.includes('--quick') || args.includes('-q');
     const isAPIOnly = args.includes('--api-only');
     const showHelp = args.includes('--help') || args.includes('-h');
 
@@ -34,40 +30,30 @@ async function main() {
 LazyCraftLauncher - The lazy way to host Minecraft
 
 Usage:
-  lazycraft              Launch interactive setup wizard
-  lazycraft --quick      Quick launch with saved config
-  lazycraft --api-only   Start API server only (for external UIs)
+  lazycraft              Launch web UI (opens in browser)
+  lazycraft --api-only   Start API server only (no browser)
   lazycraft --help       Show this help message
 
 Options:
-  -q, --quick           Quick launch mode
   -h, --help            Show help
-  --api-only            Start API server only
+  --api-only            Start API server without opening browser
 
 Configuration is saved in .lazycraft.yml
 Logs are saved in the logs/ directory
 Backups are saved in the backups/ directory
+
+Web UI available at: http://127.0.0.1:8765
       `.trim());
       process.exit(0);
     }
 
-    // Start API server if not in API-only mode (always runs alongside UI)
-    if (!isAPIOnly) {
-      startAPI().catch(err => {
-        logger.error('Failed to start API server:', err);
-      });
-    }
-
-    const supportsRawMode = Boolean(
-      process.stdin.isTTY && typeof (process.stdin as any).setRawMode === 'function'
-    );
-
     if (isAPIOnly) {
-      // API-only mode
+      // API-only mode (no browser)
       console.log('Starting LazyCraftLauncher API on http://127.0.0.1:8765');
       await startAPI();
       console.log('API server running. Press Ctrl+C to stop.');
-      
+      console.log('Web UI available at: http://127.0.0.1:8765');
+
       // Keep process alive
       process.stdin.resume();
       process.on('SIGINT', () => {
@@ -75,18 +61,41 @@ Backups are saved in the backups/ directory
         process.exit(0);
       });
     } else {
-      if (!supportsRawMode) {
-        console.error('Interactive mode requires a TTY with raw mode support.');
-        console.error('Run this launcher from a terminal window, or use `lazycraft --quick`.');
-        process.exit(1);
+      // Web UI mode (default)
+      console.log('Starting LazyCraftLauncher...');
+      console.log('');
+      console.log('╔══════════════════════════════════════╗');
+      console.log('║                                      ║');
+      console.log('║      LAZY CRAFT LAUNCHER             ║');
+      console.log('║                                      ║');
+      console.log('║   "You ask to play, we host for you."║');
+      console.log('║                                      ║');
+      console.log('╚══════════════════════════════════════╝');
+      console.log('');
+
+      // Start API server
+      await startAPI();
+      console.log('API server started on http://127.0.0.1:8765');
+      console.log('Opening web UI in your browser...');
+      console.log('');
+      console.log('If the browser doesn\'t open, visit: http://127.0.0.1:8765');
+      console.log('Press Ctrl+C to stop the server.');
+      console.log('');
+
+      // Open browser
+      try {
+        await open('http://127.0.0.1:8765');
+      } catch (error) {
+        logger.error('Failed to open browser:', error);
+        console.log('Could not open browser automatically. Please visit http://127.0.0.1:8765 manually.');
       }
 
-      // Launch interactive UI
-      const { waitUntilExit } = render(
-        React.createElement(App, { quickMode: isQuickMode })
-      );
-
-      await waitUntilExit();
+      // Keep process alive
+      process.stdin.resume();
+      process.on('SIGINT', () => {
+        console.log('\nShutting down server...');
+        process.exit(0);
+      });
     }
   } catch (error) {
     logger.error('Fatal error:', error);

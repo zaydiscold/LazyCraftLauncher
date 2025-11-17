@@ -4,7 +4,7 @@
 
 export type SupportedOS = 'windows' | 'mac' | 'linux';
 
-export type ServerType = 'vanilla' | 'forge';
+export type ServerType = 'vanilla' | 'forge' | 'fabric' | 'paper';
 
 export interface LazyConfig {
   version: string;

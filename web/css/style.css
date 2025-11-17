@@ -1,0 +1,698 @@
+/* =========================================
+   LAZYCRAFT - Nostalgia-Core Minecraft Theme
+   Extreme Creativity Edition with Tailwind CSS
+   ========================================= */
+
+/* Import Pixel Font */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+/* =========================================
+   ROOT & GLOBAL STYLES
+   ========================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'VT323', monospace;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* =========================================
+   PIXEL FONTS
+   ========================================= */
+
+.pixel-text {
+    font-family: 'Press Start 2P', cursive;
+    letter-spacing: 2px;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: none;
+    image-rendering: pixelated;
+}
+
+.pixel-text-small {
+    font-family: 'VT323', monospace;
+    font-size: 1.1em;
+    letter-spacing: 1px;
+}
+
+/* =========================================
+   SCREEN MANAGEMENT
+   ========================================= */
+
+.screen {
+    min-height: 100vh;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.screen.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.screen.hidden {
+    display: none !important;
+}
+
+/* =========================================
+   GLASSMORPHISM CARDS
+   ========================================= */
+
+.glass-card {
+    background: rgba(33, 33, 33, 0.6);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow:
+        0 8px 32px 0 rgba(0, 0, 0, 0.37),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 0 60px rgba(124, 179, 66, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(124, 179, 66, 0.1),
+        transparent
+    );
+    transition: left 0.5s ease;
+}
+
+.glass-card:hover::before {
+    left: 100%;
+}
+
+.glass-card:hover {
+    box-shadow:
+        0 12px 48px 0 rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        0 0 100px rgba(124, 179, 66, 0.2);
+}
+
+/* =========================================
+   ANIMATED PARTICLES BACKGROUND
+   ========================================= */
+
+.particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: rgba(124, 179, 66, 0.6);
+    border-radius: 2px;
+    box-shadow:
+        0 0 10px rgba(124, 179, 66, 0.5),
+        0 0 20px rgba(124, 179, 66, 0.3);
+    animation: particleFloat 20s infinite ease-in-out;
+    image-rendering: pixelated;
+}
+
+.particle:nth-child(1) {
+    left: 10%;
+    animation-delay: 0s;
+    animation-duration: 15s;
+}
+
+.particle:nth-child(2) {
+    left: 20%;
+    animation-delay: 2s;
+    animation-duration: 18s;
+    background: rgba(0, 188, 212, 0.6);
+    box-shadow:
+        0 0 10px rgba(0, 188, 212, 0.5),
+        0 0 20px rgba(0, 188, 212, 0.3);
+}
+
+.particle:nth-child(3) {
+    left: 30%;
+    animation-delay: 4s;
+    animation-duration: 22s;
+}
+
+.particle:nth-child(4) {
+    left: 50%;
+    animation-delay: 1s;
+    animation-duration: 20s;
+    background: rgba(0, 200, 83, 0.6);
+    box-shadow:
+        0 0 10px rgba(0, 200, 83, 0.5),
+        0 0 20px rgba(0, 200, 83, 0.3);
+}
+
+.particle:nth-child(5) {
+    left: 60%;
+    animation-delay: 3s;
+    animation-duration: 17s;
+}
+
+.particle:nth-child(6) {
+    left: 70%;
+    animation-delay: 5s;
+    animation-duration: 19s;
+    background: rgba(255, 179, 0, 0.6);
+    box-shadow:
+        0 0 10px rgba(255, 179, 0, 0.5),
+        0 0 20px rgba(255, 179, 0, 0.3);
+}
+
+.particle:nth-child(7) {
+    left: 80%;
+    animation-delay: 2.5s;
+    animation-duration: 21s;
+}
+
+.particle:nth-child(8) {
+    left: 90%;
+    animation-delay: 4.5s;
+    animation-duration: 16s;
+    background: rgba(0, 188, 212, 0.6);
+    box-shadow:
+        0 0 10px rgba(0, 188, 212, 0.5),
+        0 0 20px rgba(0, 188, 212, 0.3);
+}
+
+@keyframes particleFloat {
+    0% {
+        transform: translateY(100vh) rotate(0deg);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* =========================================
+   PIXEL ART BORDER EFFECT
+   ========================================= */
+
+.pixel-art-border {
+    position: relative;
+    image-rendering: pixelated;
+}
+
+.pixel-art-border::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    background: linear-gradient(45deg,
+        rgba(124, 179, 66, 0.3),
+        rgba(0, 200, 83, 0.3),
+        rgba(124, 179, 66, 0.3)
+    );
+    border-radius: inherit;
+    z-index: -1;
+    animation: borderPulse 3s ease-in-out infinite;
+}
+
+@keyframes borderPulse {
+    0%, 100% {
+        opacity: 0.5;
+        filter: blur(4px);
+    }
+    50% {
+        opacity: 1;
+        filter: blur(8px);
+    }
+}
+
+/* =========================================
+   CUSTOM BUTTONS
+   ========================================= */
+
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-warning,
+.btn-info {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7rem;
+    padding: 1rem 2rem;
+    border: 3px solid;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow:
+        0 4px 0 rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(0, 0, 0, 0.3);
+    image-rendering: pixelated;
+}
+
+.btn-primary::before,
+.btn-secondary::before,
+.btn-success::before,
+.btn-danger::before,
+.btn-warning::before,
+.btn-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-primary:hover::before,
+.btn-secondary:hover::before,
+.btn-success:hover::before,
+.btn-danger:hover::before,
+.btn-warning:hover::before,
+.btn-info:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #00bcd4, #0097a7);
+    border-color: #006064;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 0 rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(0, 188, 212, 0.5);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow:
+        0 2px 0 rgba(0, 0, 0, 0.5),
+        0 0 15px rgba(0, 188, 212, 0.3);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #757575, #616161);
+    border-color: #424242;
+    color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 0 rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(117, 117, 117, 0.5);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #00c853, #00a843);
+    border-color: #008833;
+    color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 0 rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(0, 200, 83, 0.5);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #d32f2f, #b71c1c);
+    border-color: #8b0000;
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 0 rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(211, 47, 47, 0.5);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffb300, #ff8f00);
+    border-color: #e65100;
+    color: white;
+}
+
+.btn-warning:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 0 rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(255, 179, 0, 0.5);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #bdbdbd, #9e9e9e);
+    border-color: #757575;
+    color: #212121;
+}
+
+.btn-info:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 0 rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(189, 189, 189, 0.5);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-success:disabled,
+.btn-danger:disabled,
+.btn-warning:disabled,
+.btn-info:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(50%);
+}
+
+/* =========================================
+   STATUS BADGES
+   ========================================= */
+
+.status-badge {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.65rem;
+    position: relative;
+    animation: pixelPulse 2s ease-in-out infinite;
+}
+
+.status-badge.running {
+    color: #00c853;
+    background: rgba(0, 200, 83, 0.2);
+    border: 2px solid #00c853;
+    box-shadow:
+        0 0 10px rgba(0, 200, 83, 0.3),
+        inset 0 0 10px rgba(0, 200, 83, 0.1);
+}
+
+.status-badge.stopped {
+    color: #d32f2f;
+    background: rgba(211, 47, 47, 0.2);
+    border: 2px solid #d32f2f;
+    box-shadow:
+        0 0 10px rgba(211, 47, 47, 0.3),
+        inset 0 0 10px rgba(211, 47, 47, 0.1);
+}
+
+/* =========================================
+   CUSTOM SCROLLBAR
+   ========================================= */
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(33, 33, 33, 0.5);
+    border-radius: 6px;
+    border: 2px solid rgba(117, 117, 117, 0.3);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #7cb342, #689f38);
+    border-radius: 6px;
+    border: 2px solid rgba(33, 33, 33, 0.5);
+    box-shadow:
+        0 0 10px rgba(124, 179, 66, 0.3),
+        inset 0 0 5px rgba(255, 255, 255, 0.2);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #8bc34a, #7cb342);
+    box-shadow:
+        0 0 20px rgba(124, 179, 66, 0.5),
+        inset 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #7cb342 rgba(33, 33, 33, 0.5);
+}
+
+/* =========================================
+   FORM ELEMENTS
+   ========================================= */
+
+input[type="text"],
+input[type="number"],
+select {
+    font-family: 'VT323', monospace;
+    font-size: 1.1rem;
+}
+
+input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #7cb342;
+}
+
+/* =========================================
+   OPTION CARDS (for wizard)
+   ========================================= */
+
+.option-card {
+    background: rgba(33, 33, 33, 0.6);
+    backdrop-filter: blur(10px);
+    border: 3px solid rgba(117, 117, 117, 0.3);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.option-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(124, 179, 66, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.option-card:hover {
+    border-color: rgba(124, 179, 66, 0.8);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.4),
+        0 0 40px rgba(124, 179, 66, 0.2);
+}
+
+.option-card:hover::before {
+    left: 100%;
+}
+
+.option-card.selected {
+    border-color: #00c853;
+    background: rgba(0, 200, 83, 0.15);
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.4),
+        0 0 60px rgba(0, 200, 83, 0.4),
+        inset 0 0 20px rgba(0, 200, 83, 0.1);
+    transform: translateY(-4px) scale(1.05);
+}
+
+.option-card h4 {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.75rem;
+    color: #ffb300;
+    margin-bottom: 0.75rem;
+}
+
+.option-card p {
+    font-family: 'VT323', monospace;
+    font-size: 1rem;
+    color: #bdbdbd;
+}
+
+/* =========================================
+   PLAYER LIST ITEMS
+   ========================================= */
+
+.player-item {
+    background: rgba(33, 33, 33, 0.6);
+    border: 2px solid rgba(117, 117, 117, 0.3);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-family: 'VT323', monospace;
+    font-size: 1rem;
+    color: white;
+    transition: all 0.2s ease;
+}
+
+.player-item:hover {
+    border-color: rgba(124, 179, 66, 0.6);
+    background: rgba(124, 179, 66, 0.1);
+    transform: translateX(4px);
+}
+
+.player-item::before {
+    content: "👤 ";
+    font-size: 1.2rem;
+}
+
+/* =========================================
+   REACHABILITY STATUS
+   ========================================= */
+
+#reachability-status.reachable {
+    border-color: rgba(0, 200, 83, 0.5);
+    background: rgba(0, 200, 83, 0.1);
+}
+
+#reachability-status.reachable span {
+    color: #00c853;
+}
+
+#reachability-status.unreachable {
+    border-color: rgba(255, 179, 0, 0.5);
+    background: rgba(255, 179, 0, 0.1);
+}
+
+#reachability-status.unreachable span {
+    color: #ffb300;
+}
+
+/* =========================================
+   CONSOLE OUTPUT
+   ========================================= */
+
+.console-line {
+    font-family: 'VT323', monospace;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #bdbdbd;
+    margin-bottom: 0.25rem;
+    word-wrap: break-word;
+}
+
+.console-line.error {
+    color: #ff5252;
+    text-shadow: 0 0 5px rgba(255, 82, 82, 0.3);
+}
+
+.console-line.warn {
+    color: #ffb300;
+    text-shadow: 0 0 5px rgba(255, 179, 0, 0.3);
+}
+
+.console-line.info {
+    color: #00bcd4;
+    text-shadow: 0 0 5px rgba(0, 188, 212, 0.3);
+}
+
+/* =========================================
+   RESPONSIVE UTILITIES
+   ========================================= */
+
+@media (max-width: 768px) {
+    .pixel-text {
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+    }
+
+    .pixel-text-small {
+        font-size: 0.95rem;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-success,
+    .btn-danger,
+    .btn-warning,
+    .btn-info {
+        font-size: 0.6rem;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .glass-card {
+        padding: 1rem !important;
+    }
+}
+
+/* =========================================
+   LOADING ANIMATIONS
+   ========================================= */
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.shimmer {
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 1000px 100%;
+}
+
+/* =========================================
+   UTILITY CLASSES
+   ========================================= */
+
+.text-glow {
+    text-shadow:
+        0 0 10px currentColor,
+        0 0 20px currentColor,
+        0 0 30px currentColor;
+}
+
+.box-glow {
+    box-shadow:
+        0 0 20px currentColor,
+        0 0 40px currentColor,
+        0 0 60px currentColor;
+}
+
+/* =========================================
+   SMOOTH TRANSITIONS
+   ========================================= */
+
+* {
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Override for animations */
+*[class*="animate-"] {
+    transition: none;
+}
