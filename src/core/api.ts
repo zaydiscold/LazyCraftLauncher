@@ -3,23 +3,25 @@
  * Provides HTTP API for status and control
  */
 
-import Fastify from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
-import { loadConfig, saveConfig } from './config.js';
+import { loadConfig, saveConfig, validateConfig } from './config.js';
 import { getServerStatus } from './status.js';
 import { startServer, stopServer, restartServer, isServerRunning, sendCommand } from './run.js';
 import { createBackup } from './backup.js';
 import { detectSystem } from './detect.js';
+import { loadNetworkInfo } from './network.js';
 import { logger } from '../utils/log.js';
-import type { APIResponse, ActionResult, ServerStatus, NetworkInfo, LazyConfig } from '../types/index.js';
+import { LIMITS } from '../utils/constants.js';
+import type { APIResponse, ActionResult, ServerStatus, NetworkInfo, LazyConfig, SystemInfo } from '../types/index.js';
 import { getPaths } from '../utils/paths.js';
 import fs from 'fs-extra';
 import path from 'path';
 
-const API_PORT = 8765;
-const API_HOST = '127.0.0.1';
+const API_PORT = LIMITS.API_PORT;
+const API_HOST = LIMITS.API_HOST;
 
-let apiServer: any = null;
+let apiServer: FastifyInstance | null = null;
 
 export async function startAPI(): Promise<void> {
   if (apiServer) {
@@ -46,7 +48,7 @@ export async function startAPI(): Promise<void> {
         } as APIResponse<ServerStatus>;
       }
 
-      const networkInfo = await readNetworkInfo();
+      const networkInfo = await loadNetworkInfo();
       const status = await getServerStatus(config, networkInfo, null);
 
       return {
@@ -68,13 +70,13 @@ export async function startAPI(): Promise<void> {
       return {
         success: true,
         data: config,
-      } as APIResponse<any>;
+      } as APIResponse<LazyConfig | null>;
     } catch (error) {
       logger.error('API /config error:', error);
       return {
         success: false,
         error: String(error),
-      } as APIResponse<any>;
+      } as APIResponse<LazyConfig | null>;
     }
   });
 
@@ -82,6 +84,7 @@ export async function startAPI(): Promise<void> {
     const operationId = generateOperationId();
     reply.code(202);
 
+    // Fire-and-forget async operation with error handling
     (async () => {
       try {
         const config = await loadConfig();
@@ -93,7 +96,10 @@ export async function startAPI(): Promise<void> {
       } catch (error) {
         logger.error('Failed to start server:', error);
       }
-    })();
+    })().catch((error) => {
+      // Catch any errors that escape the try-catch (should never happen, but defensive)
+      logger.error('Unhandled error in start server operation:', error);
+    });
 
     return {
       operationId,
@@ -106,13 +112,16 @@ export async function startAPI(): Promise<void> {
     const operationId = generateOperationId();
     reply.code(202);
 
+    // Fire-and-forget async operation with error handling
     (async () => {
       try {
         await stopServer();
       } catch (error) {
         logger.error('Failed to stop server:', error);
       }
-    })();
+    })().catch((error) => {
+      logger.error('Unhandled error in stop server operation:', error);
+    });
 
     return {
       operationId,
@@ -125,6 +134,7 @@ export async function startAPI(): Promise<void> {
     const operationId = generateOperationId();
     reply.code(202);
 
+    // Fire-and-forget async operation with error handling
     (async () => {
       try {
         const config = await loadConfig();
@@ -134,7 +144,9 @@ export async function startAPI(): Promise<void> {
       } catch (error) {
         logger.error('Failed to restart server:', error);
       }
-    })();
+    })().catch((error) => {
+      logger.error('Unhandled error in restart server operation:', error);
+    });
 
     return {
       operationId,
@@ -147,6 +159,7 @@ export async function startAPI(): Promise<void> {
     const operationId = generateOperationId();
     reply.code(202);
 
+    // Fire-and-forget async operation with error handling
     (async () => {
       try {
         const config = await loadConfig();
@@ -156,7 +169,9 @@ export async function startAPI(): Promise<void> {
       } catch (error) {
         logger.error('Failed to create backup:', error);
       }
-    })();
+    })().catch((error) => {
+      logger.error('Unhandled error in backup operation:', error);
+    });
 
     return {
       operationId,
@@ -173,7 +188,7 @@ export async function startAPI(): Promise<void> {
         return {
           success: false,
           error: 'Command is required',
-        } as APIResponse<any>;
+        } as APIResponse<{ sent: boolean }>;
       }
 
       if (!isServerRunning()) {
@@ -181,27 +196,38 @@ export async function startAPI(): Promise<void> {
         return {
           success: false,
           error: 'Server is not running',
-        } as APIResponse<any>;
+        } as APIResponse<{ sent: boolean }>;
       }
 
       const sent = sendCommand(command);
       return {
         success: sent,
         data: { sent },
-      } as APIResponse<any>;
+      } as APIResponse<{ sent: boolean }>;
     } catch (error) {
       logger.error('API /command error:', error);
       reply.code(500);
       return {
         success: false,
         error: String(error),
-      } as APIResponse<any>;
+      } as APIResponse<{ sent: boolean }>;
     }
   });
 
   fastify.post<{ Body: LazyConfig }>('/config', async (request, reply) => {
     try {
       const config = request.body;
+
+      // Validate configuration before saving
+      const validation = validateConfig(config);
+      if (!validation.valid) {
+        reply.code(400);
+        return {
+          success: false,
+          error: `Invalid configuration: ${validation.errors.join(', ')}`,
+        } as APIResponse<LazyConfig>;
+      }
+
       await saveConfig(config);
       return {
         success: true,
@@ -213,7 +239,7 @@ export async function startAPI(): Promise<void> {
       return {
         success: false,
         error: String(error),
-      } as APIResponse<any>;
+      } as APIResponse<LazyConfig>;
     }
   });
 
@@ -223,13 +249,13 @@ export async function startAPI(): Promise<void> {
       return {
         success: true,
         data: systemInfo,
-      } as APIResponse<any>;
+      } as APIResponse<SystemInfo>;
     } catch (error) {
       logger.error('API /system error:', error);
       return {
         success: false,
         error: String(error),
-      } as APIResponse<any>;
+      } as APIResponse<SystemInfo>;
     }
   });
 
@@ -267,17 +293,4 @@ export async function stopAPI(): Promise<void> {
 
 function generateOperationId(): string {
   return `op_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
-async function readNetworkInfo(): Promise<NetworkInfo | null> {
-  try {
-    const paths = getPaths();
-    const infoPath = path.join(paths.root, '.network-info.json');
-    if (await fs.pathExists(infoPath)) {
-      return await fs.readJson(infoPath) as NetworkInfo;
-    }
-  } catch (error) {
-    logger.warn('Failed to read network info for API:', error);
-  }
-  return null;
 }

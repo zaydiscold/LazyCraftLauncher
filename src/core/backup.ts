@@ -8,9 +8,11 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import { getPaths } from '../utils/paths.js';
 import { logger } from '../utils/log.js';
+import { formatBackupTimestamp, formatFileSize } from '../utils/date.js';
+import { LIMITS } from '../utils/constants.js';
 import type { BackupInfo } from '../types/index.js';
 
-const MAX_BACKUPS = 7;
+const MAX_BACKUPS = LIMITS.MAX_BACKUPS;
 
 /**
  * Create a backup of the world
@@ -20,9 +22,9 @@ export async function createBackup(worldPath: string): Promise<BackupInfo> {
   const backupDir = paths.backups;
   
   await fs.ensureDir(backupDir);
-  
+
   // Generate backup filename
-  const timestamp = formatTimestamp(new Date());
+  const timestamp = formatBackupTimestamp(new Date());
   const filename = `${timestamp}.zip`;
   const backupPath = path.join(backupDir, filename);
   
@@ -78,7 +80,7 @@ export async function createBackup(worldPath: string): Promise<BackupInfo> {
       createdAt: new Date(),
     };
     
-    logger.info(`Backup created successfully: ${filename} (${formatSize(stats.size)})`);
+    logger.info(`Backup created successfully: ${filename} (${formatFileSize(stats.size)})`);
     
     return backupInfo;
   } catch (error) {
@@ -200,7 +202,7 @@ export async function restoreBackup(backupPath: string, worldPath: string): Prom
     
     // Backup current world if it exists
     if (await fs.pathExists(worldPath)) {
-      const backupName = `pre-restore-${formatTimestamp(new Date())}`;
+      const backupName = `pre-restore-${formatBackupTimestamp(new Date())}`;
       const currentBackup = path.join(worldPath + '-' + backupName);
       await fs.move(worldPath, currentBackup);
       logger.info(`Backed up current world to ${currentBackup}`);
@@ -232,35 +234,6 @@ export async function restoreBackup(backupPath: string, worldPath: string): Prom
     logger.error('Error restoring backup:', error);
     throw new Error(`Failed to restore backup: ${error}`);
   }
-}
-
-/**
- * Format timestamp for backup filename
- */
-function formatTimestamp(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  
-  return `${year}${month}${day}-${hours}${minutes}`;
-}
-
-/**
- * Format file size for display
- */
-function formatSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
-  
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-  
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
 
 /**

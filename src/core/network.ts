@@ -549,3 +549,20 @@ async function persistNetworkInfo(info: NetworkInfo): Promise<void> {
     logger.warn('Failed to persist network info:', error);
   }
 }
+
+/**
+ * Load network info from cache file
+ * Shared function used by both API and server startup
+ */
+export async function loadNetworkInfo(): Promise<NetworkInfo | null> {
+  try {
+    const paths = getPaths();
+    const infoPath = path.join(paths.root, '.network-info.json');
+    if (await fs.pathExists(infoPath)) {
+      return await fs.readJson(infoPath) as NetworkInfo;
+    }
+  } catch (error) {
+    logger.warn('Failed to read network info:', error);
+  }
+  return null;
+}
