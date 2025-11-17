@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LazyCraft Launcher</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen active">
+        <div class="container">
+            <div class="banner">
+                <pre class="ascii-art">
+╔══════════════════════════════════════╗
+║                                      ║
+║      LAZY CRAFT LAUNCHER             ║
+║                                      ║
+║   "You ask to play, we host for you."║
+║                                      ║
+╚══════════════════════════════════════╝
+                </pre>
+            </div>
+            <div class="loading-dots">
+                <span>Loading</span><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Setup Wizard Screen -->
+    <div id="wizard-screen" class="screen">
+        <div class="container">
+            <div class="banner-small">
+                <h1>⛏️ LAZY CRAFT LAUNCHER ⛏️</h1>
+                <p class="tagline">"You ask to play, we host for you."</p>
+            </div>
+
+            <div class="wizard-panel panel">
+                <h2 id="wizard-title">Server Setup</h2>
+                <div id="wizard-content">
+                    <!-- Dynamic wizard steps will be inserted here -->
+                </div>
+                <div class="wizard-navigation">
+                    <button id="wizard-back" class="btn btn-secondary" style="display: none;">← Back</button>
+                    <button id="wizard-next" class="btn btn-primary">Next →</button>
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div id="wizard-progress" class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Screen -->
+    <div id="dashboard-screen" class="screen">
+        <div class="container">
+            <div class="banner-small">
+                <h1>⛏️ LAZY CRAFT LAUNCHER ⛏️</h1>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Status Panel -->
+                <div class="panel status-panel">
+                    <h3>🎮 Server Status</h3>
+                    <div class="status-content">
+                        <div class="status-row">
+                            <span class="label">Status:</span>
+                            <span id="server-status" class="status-badge">Stopped</span>
+                        </div>
+                        <div class="status-row">
+                            <span class="label">Version:</span>
+                            <span id="server-version">-</span>
+                        </div>
+                        <div class="status-row">
+                            <span class="label">Uptime:</span>
+                            <span id="server-uptime">-</span>
+                        </div>
+                        <div class="status-row">
+                            <span class="label">Players:</span>
+                            <span id="server-players">0/0</span>
+                        </div>
+                        <div class="status-row">
+                            <span class="label">Memory:</span>
+                            <span id="server-memory">-</span>
+                        </div>
+                        <div class="memory-bar">
+                            <div id="memory-bar-fill" class="memory-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connection Panel -->
+                <div class="panel connection-panel">
+                    <h3>🌐 Connection Info</h3>
+                    <div class="connection-content">
+                        <div class="connection-row">
+                            <span class="label">LAN IP:</span>
+                            <code id="lan-ip" class="copyable">-</code>
+                        </div>
+                        <div class="connection-row">
+                            <span class="label">Public IP:</span>
+                            <code id="public-ip" class="copyable">-</code>
+                        </div>
+                        <div class="reachability-status" id="reachability-status">
+                            <span class="status-icon">⚠️</span>
+                            <span>Checking connectivity...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player List Panel -->
+                <div class="panel players-panel">
+                    <h3>👥 Online Players</h3>
+                    <div id="player-list" class="player-list">
+                        <p class="empty-state">No players online</p>
+                    </div>
+                </div>
+
+                <!-- Control Panel -->
+                <div class="panel controls-panel">
+                    <h3>🎛️ Server Controls</h3>
+                    <div class="control-buttons">
+                        <button id="btn-start" class="btn btn-success btn-large">▶️ Start Server</button>
+                        <button id="btn-stop" class="btn btn-danger btn-large" disabled>⏹️ Stop Server</button>
+                        <button id="btn-restart" class="btn btn-warning btn-large" disabled>🔄 Restart</button>
+                        <button id="btn-backup" class="btn btn-info btn-large">💾 Backup</button>
+                    </div>
+                </div>
+
+                <!-- Console Panel -->
+                <div class="panel console-panel">
+                    <h3>📜 Server Console</h3>
+                    <div id="console-output" class="console-output">
+                        <div class="console-line">Waiting for server to start...</div>
+                    </div>
+                    <div class="console-input-container">
+                        <input
+                            type="text"
+                            id="console-input"
+                            class="console-input"
+                            placeholder="Enter command..."
+                            disabled
+                        />
+                        <button id="console-send" class="btn btn-primary" disabled>Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>💡 Tip: Share your Public IP with friends so they can join!</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/wizard.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

@@ -101,8 +101,8 @@ export const Wizard: React.FC<WizardProps> = ({
   /**
    * Handle world choice selection
    */
-  const handleWorldSelect = (item: { value: 'new' | 'existing' }) => {
-    wizard.updateAnswer('worldChoice', item.value);
+  const handleWorldSelect = (item: { value: string }) => {
+    wizard.updateAnswer('worldChoice', item.value as 'new' | 'existing');
     wizard.goNext(); // Hook will handle conditional navigation
   };
 

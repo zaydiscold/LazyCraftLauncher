@@ -4,12 +4,14 @@
  */
 
 import Fastify from 'fastify';
-import { loadConfig } from './config.js';
+import fastifyStatic from '@fastify/static';
+import { loadConfig, saveConfig } from './config.js';
 import { getServerStatus } from './status.js';
-import { startServer, stopServer, restartServer, isServerRunning } from './run.js';
+import { startServer, stopServer, restartServer, isServerRunning, sendCommand } from './run.js';
 import { createBackup } from './backup.js';
+import { detectSystem } from './detect.js';
 import { logger } from '../utils/log.js';
-import type { APIResponse, ActionResult, ServerStatus, NetworkInfo } from '../types/index.js';
+import type { APIResponse, ActionResult, ServerStatus, NetworkInfo, LazyConfig } from '../types/index.js';
 import { getPaths } from '../utils/paths.js';
 import fs from 'fs-extra';
 import path from 'path';
@@ -163,9 +165,87 @@ export async function startAPI(): Promise<void> {
     } as ActionResult;
   });
 
+  fastify.post<{ Body: { command: string } }>('/command', async (request, reply) => {
+    try {
+      const { command } = request.body;
+      if (!command) {
+        reply.code(400);
+        return {
+          success: false,
+          error: 'Command is required',
+        } as APIResponse<any>;
+      }
+
+      if (!isServerRunning()) {
+        reply.code(400);
+        return {
+          success: false,
+          error: 'Server is not running',
+        } as APIResponse<any>;
+      }
+
+      const sent = sendCommand(command);
+      return {
+        success: sent,
+        data: { sent },
+      } as APIResponse<any>;
+    } catch (error) {
+      logger.error('API /command error:', error);
+      reply.code(500);
+      return {
+        success: false,
+        error: String(error),
+      } as APIResponse<any>;
+    }
+  });
+
+  fastify.post<{ Body: LazyConfig }>('/config', async (request, reply) => {
+    try {
+      const config = request.body;
+      await saveConfig(config);
+      return {
+        success: true,
+        data: config,
+      } as APIResponse<LazyConfig>;
+    } catch (error) {
+      logger.error('API POST /config error:', error);
+      reply.code(500);
+      return {
+        success: false,
+        error: String(error),
+      } as APIResponse<any>;
+    }
+  });
+
+  fastify.get('/system', async () => {
+    try {
+      const systemInfo = await detectSystem();
+      return {
+        success: true,
+        data: systemInfo,
+      } as APIResponse<any>;
+    } catch (error) {
+      logger.error('API /system error:', error);
+      return {
+        success: false,
+        error: String(error),
+      } as APIResponse<any>;
+    }
+  });
+
   fastify.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };
   });
+
+  // Serve static files from web directory
+  const webDir = path.join(getPaths().root, 'web');
+  if (await fs.pathExists(webDir)) {
+    await fastify.register(fastifyStatic, {
+      root: webDir,
+      prefix: '/',
+    });
+    logger.info(`Serving web UI from ${webDir}`);
+  }
 
   try {
     await fastify.listen({ port: API_PORT, host: API_HOST });

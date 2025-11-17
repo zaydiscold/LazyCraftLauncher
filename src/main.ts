@@ -8,6 +8,7 @@ import { render } from 'ink';
 import React from 'react';
 import fs from 'fs-extra';
 import path from 'path';
+import open from 'open';
 import { App } from './cli.js';
 import { startAPI } from './core/api.js';
 import { getPaths } from './utils/paths.js';
@@ -27,6 +28,7 @@ async function main() {
     const args = process.argv.slice(2);
     const isQuickMode = args.includes('--quick') || args.includes('-q');
     const isAPIOnly = args.includes('--api-only');
+    const isTUIMode = args.includes('--tui');
     const showHelp = args.includes('--help') || args.includes('-h');
 
     if (showHelp) {
@@ -34,28 +36,25 @@ async function main() {
 LazyCraftLauncher - The lazy way to host Minecraft
 
 Usage:
-  lazycraft              Launch interactive setup wizard
-  lazycraft --quick      Quick launch with saved config
+  lazycraft              Launch web UI (opens in browser)
+  lazycraft --tui        Launch terminal UI (classic mode)
+  lazycraft --quick      Quick launch with saved config (TUI mode)
   lazycraft --api-only   Start API server only (for external UIs)
   lazycraft --help       Show this help message
 
 Options:
-  -q, --quick           Quick launch mode
+  -q, --quick           Quick launch mode (TUI)
   -h, --help            Show help
+  --tui                 Use terminal UI instead of web UI
   --api-only            Start API server only
 
 Configuration is saved in .lazycraft.yml
 Logs are saved in the logs/ directory
 Backups are saved in the backups/ directory
+
+Web UI available at: http://127.0.0.1:8765
       `.trim());
       process.exit(0);
-    }
-
-    // Start API server if not in API-only mode (always runs alongside UI)
-    if (!isAPIOnly) {
-      startAPI().catch(err => {
-        logger.error('Failed to start API server:', err);
-      });
     }
 
     const supportsRawMode = Boolean(
@@ -67,26 +66,69 @@ Backups are saved in the backups/ directory
       console.log('Starting LazyCraftLauncher API on http://127.0.0.1:8765');
       await startAPI();
       console.log('API server running. Press Ctrl+C to stop.');
-      
+      console.log('Web UI available at: http://127.0.0.1:8765');
+
       // Keep process alive
       process.stdin.resume();
       process.on('SIGINT', () => {
         console.log('Shutting down API server...');
         process.exit(0);
       });
-    } else {
+    } else if (isTUIMode || isQuickMode) {
+      // Terminal UI mode
       if (!supportsRawMode) {
         console.error('Interactive mode requires a TTY with raw mode support.');
-        console.error('Run this launcher from a terminal window, or use `lazycraft --quick`.');
+        console.error('Run this launcher from a terminal window, or use the web UI (default).');
         process.exit(1);
       }
 
-      // Launch interactive UI
+      // Start API server for TUI mode as well
+      startAPI().catch(err => {
+        logger.error('Failed to start API server:', err);
+      });
+
+      // Launch interactive TUI
       const { waitUntilExit } = render(
         React.createElement(App, { quickMode: isQuickMode })
       );
 
       await waitUntilExit();
+    } else {
+      // Web UI mode (default)
+      console.log('Starting LazyCraftLauncher...');
+      console.log('');
+      console.log('╔══════════════════════════════════════╗');
+      console.log('║                                      ║');
+      console.log('║      LAZY CRAFT LAUNCHER             ║');
+      console.log('║                                      ║');
+      console.log('║   "You ask to play, we host for you."║');
+      console.log('║                                      ║');
+      console.log('╚══════════════════════════════════════╝');
+      console.log('');
+
+      // Start API server
+      await startAPI();
+      console.log('API server started on http://127.0.0.1:8765');
+      console.log('Opening web UI in your browser...');
+      console.log('');
+      console.log('If the browser doesn\'t open, visit: http://127.0.0.1:8765');
+      console.log('Press Ctrl+C to stop the server.');
+      console.log('');
+
+      // Open browser
+      try {
+        await open('http://127.0.0.1:8765');
+      } catch (error) {
+        logger.error('Failed to open browser:', error);
+        console.log('Could not open browser automatically. Please visit http://127.0.0.1:8765 manually.');
+      }
+
+      // Keep process alive
+      process.stdin.resume();
+      process.on('SIGINT', () => {
+        console.log('\nShutting down server...');
+        process.exit(0);
+      });
     }
   } catch (error) {
     logger.error('Fatal error:', error);
