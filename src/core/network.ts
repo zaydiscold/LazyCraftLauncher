@@ -6,7 +6,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import got from 'got';
-import NatAPI from 'nat-api';
+import NatAPI from '@silentbot1/nat-api';
 import net from 'net';
 import { execa } from 'execa';
 import { logger } from '../utils/log.js';

@@ -8,7 +8,7 @@
     "lazycraft": "./dist/main.js"
   },
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "node -e \"require('fs').rmSync('dist', {recursive: true, force: true})\"",
     "build": "npm run clean && tsc",
     "start": "node dist/main.js",
     "launch": "npm run build && node dist/main.js",
@@ -24,14 +24,13 @@
     "fs-extra": "^11.2.0",
     "got": "^13.0.0",
     "handlebars": "^4.7.8",
-    "nat-api": "^0.3.1",
+    "@silentbot1/nat-api": "^0.4.9",
     "open": "^11.0.0",
     "yaml": "^2.4.2"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.11.17",
-    "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.4"
   },

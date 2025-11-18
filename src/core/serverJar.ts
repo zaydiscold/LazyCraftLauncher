@@ -39,7 +39,7 @@ export async function setupServer(config: LazyConfig): Promise<void> {
   const metadata = await loadMetadata(metadataPath);
   const needsDownload = await needsServerUpdate(metadata, config, serverJarPath);
 
-  let nextMetadata: ServerMetadata | undefined;
+  let nextMetadata: ServerMetadata | null = null;
 
   if (needsDownload) {
     logger.info(`Provisioning server files for ${config.serverType} ${config.minecraftVersion}`);
