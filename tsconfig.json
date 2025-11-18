@@ -9,7 +9,7 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
     "allowSyntheticDefaultImports": true,
     "noEmitOnError": true,
     "noUnusedLocals": true,
