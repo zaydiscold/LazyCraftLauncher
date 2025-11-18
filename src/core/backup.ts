@@ -61,7 +61,7 @@ export async function createBackup(worldPath: string): Promise<BackupInfo> {
     
     // Write zip file
     await new Promise<void>((resolve, reject) => {
-      zip.writeZip(backupPath, (error) => {
+      zip.writeZip(backupPath, (error: Error | null) => {
         if (error) reject(error);
         else resolve();
       });
